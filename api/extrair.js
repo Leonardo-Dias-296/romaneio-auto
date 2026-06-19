@@ -30,13 +30,24 @@ const PROMPT = `Você é um extrator de dados de notas fiscais brasileiras. Anal
 Responda APENAS com JSON válido, sem markdown, sem blocos de código, sem qualquer texto adicional.
 Se um campo não existir no documento, use null.`;
 
-const MODELS = [
+const VISION_MODELS = [
   "google/gemma-4-26b-a4b-it:free",
   "nvidia/nemotron-nano-12b-v2-vl:free",
   "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   "google/gemma-4-31b-it:free",
   "nex-agi/nex-n2-pro:free",
   "nvidia/nemotron-3.5-content-safety:free",
+];
+
+const TEXT_MODELS = [
+  "openai/gpt-oss-20b:free",
+  "openai/gpt-oss-120b:free",
+  "nousresearch/hermes-3-llama-3.1-405b:free",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "qwen/qwen3-coder:free",
+  "cohere/north-mini-code:free",
+  "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "nvidia/nemotron-3-super-120b-a12b:free",
 ];
 
 function readRawBody(req) {
@@ -85,10 +96,10 @@ function parseMultipart(buffer, boundary) {
   return null;
 }
 
-async function callOpenRouter(messages, apiKey) {
+async function callOpenRouter(messages, apiKey, models) {
   let lastError;
 
-  for (const model of MODELS) {
+  for (const model of models) {
     try {
       const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
@@ -143,6 +154,7 @@ export default async function handler(req, res) {
   try {
     const contentType = req.headers["content-type"] || "";
     let userContent;
+    let models;
 
     if (contentType.includes("multipart/form-data")) {
       const boundary = parseBoundary(contentType);
@@ -161,17 +173,19 @@ export default async function handler(req, res) {
         },
         { type: "text", text: PROMPT },
       ];
+      models = VISION_MODELS;
     } else if (contentType.includes("application/json")) {
       const rawBody = await readRawBody(req);
       const { texto } = JSON.parse(rawBody.toString());
       if (!texto) return res.status(400).json({ erro: "Campo 'texto' ausente." });
       userContent = [{ type: "text", text: `${PROMPT}\n\nConteúdo da NF:\n${texto}` }];
+      models = [...VISION_MODELS, ...TEXT_MODELS];
     } else {
       return res.status(400).json({ erro: "Content-Type não suportado." });
     }
 
     const messages = [{ role: "user", content: userContent }];
-    const resultado = await callOpenRouter(messages, apiKey);
+    const resultado = await callOpenRouter(messages, apiKey, models);
     return res.status(200).json(resultado);
   } catch (err) {
     console.error("[extrair]", err.message);
