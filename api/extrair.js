@@ -1,9 +1,9 @@
 // api/extrair.js — Vercel Serverless Function
-// A chave da API (GEMINI_API_KEY) fica só aqui, nunca vai pro browser.
+// A chave da API (OPENROUTER_API_KEY) fica só aqui, nunca vai pro browser.
 
 export const config = {
   api: {
-    bodyParser: false, // usamos o parser manual para suportar multipart
+    bodyParser: false,
     sizeLimit: "20mb",
   },
 };
@@ -30,7 +30,13 @@ const PROMPT = `Você é um extrator de dados de notas fiscais brasileiras. Anal
 Responda APENAS com JSON válido, sem markdown, sem blocos de código, sem qualquer texto adicional.
 Se um campo não existir no documento, use null.`;
 
-// Lê o body cru da request (Buffer)
+const MODELS = [
+  "google/gemini-2.0-flash-001:free",
+  "google/gemini-2.5-flash:free",
+  "meta-llama/llama-4-maverick:free",
+  "deepseek/deepseek-chat-v3-0324:free",
+];
+
 function readRawBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -40,13 +46,11 @@ function readRawBody(req) {
   });
 }
 
-// Extrai boundary do Content-Type multipart
 function parseBoundary(contentType) {
   const match = contentType.match(/boundary=([^\s;]+)/);
   return match ? match[1] : null;
 }
 
-// Parser multipart mínimo — extrai o primeiro campo "arquivo"
 function parseMultipart(buffer, boundary) {
   const sep = Buffer.from(`--${boundary}`);
   const parts = [];
@@ -57,7 +61,7 @@ function parseMultipart(buffer, boundary) {
     if (idx === -1) break;
     const end = buffer.indexOf(sep, idx + sep.length);
     const part = buffer.slice(idx + sep.length, end === -1 ? buffer.length : end);
-    if (part.length > 2) parts.push(part); // ignora terminadores vazios
+    if (part.length > 2) parts.push(part);
     start = idx + sep.length;
     if (end === -1) break;
   }
@@ -66,7 +70,7 @@ function parseMultipart(buffer, boundary) {
     const headerEnd = part.indexOf("\r\n\r\n");
     if (headerEnd === -1) continue;
     const headerStr = part.slice(0, headerEnd).toString();
-    const body = part.slice(headerEnd + 4, part.length - 2); // remove \r\n final
+    const body = part.slice(headerEnd + 4, part.length - 2);
 
     if (headerStr.includes('name="arquivo"')) {
       const mimeMatch = headerStr.match(/Content-Type:\s*([^\r\n]+)/i);
@@ -79,64 +83,66 @@ function parseMultipart(buffer, boundary) {
   return null;
 }
 
-async function callGemini(parts, apiKey) {
-  const MAX_RETRIES = 3;
+async function callOpenRouter(messages, apiKey) {
   let lastError;
 
-  for (let i = 0; i < MAX_RETRIES; i++) {
-    if (i > 0) await new Promise((r) => setTimeout(r, i * 15000));
-
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
+  for (const model of MODELS) {
+    try {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          "HTTP-Referer": "https://romaneio-auto.vercel.app",
+          "X-Title": "RomaneioAuto",
+        },
         body: JSON.stringify({
-          contents: [{ role: "user", parts }],
-          generationConfig: {
-            temperature: 0,
-            maxOutputTokens: 1024,
-          },
+          model,
+          messages,
+          temperature: 0,
+          max_tokens: 1024,
         }),
-      }
-    );
+      });
 
-    if (res.status === 429) {
-      lastError = new Error("API sobrecarregada (429)");
+      if (res.status === 429) {
+        lastError = new Error(`Rate limit no modelo ${model}`);
+        continue;
+      }
+      if (!res.ok) {
+        const txt = await res.text();
+        lastError = new Error(`Erro ${model} ${res.status}: ${txt}`);
+        continue;
+      }
+
+      const data = await res.json();
+      const texto = (data.choices?.[0]?.message?.content || "")
+        .replace(/```json|```/g, "")
+        .trim();
+
+      return JSON.parse(texto);
+    } catch (err) {
+      lastError = err;
       continue;
     }
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`Erro Gemini ${res.status}: ${txt}`);
-    }
-
-    const data = await res.json();
-    const texto = (data.candidates?.[0]?.content?.parts?.[0]?.text || "")
-      .replace(/```json|```/g, "")
-      .trim();
-
-    return JSON.parse(texto);
   }
-  throw lastError || new Error("Serviço indisponível após retries");
+  throw lastError || new Error("Todos os modelos falharam");
 }
 
 export default async function handler(req, res) {
-  // CORS — permite qualquer origem *.vercel.app ou domínio próprio
   res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ erro: "Método não permitido" });
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return res.status(500).json({ erro: "GEMINI_API_KEY não configurada." });
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) return res.status(500).json({ erro: "OPENROUTER_API_KEY não configurada." });
 
   try {
     const contentType = req.headers["content-type"] || "";
-    let parts;
+    let userContent;
 
     if (contentType.includes("multipart/form-data")) {
-      // PDF ou imagem
       const boundary = parseBoundary(contentType);
       if (!boundary) return res.status(400).json({ erro: "Boundary multipart não encontrado." });
 
@@ -146,26 +152,24 @@ export default async function handler(req, res) {
 
       const base64 = file.buffer.toString("base64");
 
-      parts = [
+      userContent = [
         {
-          inlineData: {
-            mimeType: file.mimetype,
-            data: base64,
-          },
+          type: "image_url",
+          image_url: { url: `data:${file.mimetype};base64,${base64}` },
         },
-        { text: PROMPT },
+        { type: "text", text: PROMPT },
       ];
     } else if (contentType.includes("application/json")) {
-      // XML ou TXT
       const rawBody = await readRawBody(req);
       const { texto } = JSON.parse(rawBody.toString());
       if (!texto) return res.status(400).json({ erro: "Campo 'texto' ausente." });
-      parts = [{ text: `${PROMPT}\n\nConteúdo da NF:\n${texto}` }];
+      userContent = [{ type: "text", text: `${PROMPT}\n\nConteúdo da NF:\n${texto}` }];
     } else {
       return res.status(400).json({ erro: "Content-Type não suportado." });
     }
 
-    const resultado = await callGemini(parts, apiKey);
+    const messages = [{ role: "user", content: userContent }];
+    const resultado = await callOpenRouter(messages, apiKey);
     return res.status(200).json(resultado);
   } catch (err) {
     console.error("[extrair]", err.message);
