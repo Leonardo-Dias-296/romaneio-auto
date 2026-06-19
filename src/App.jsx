@@ -425,8 +425,8 @@ export default function App() {
           const n = i + 1, done = step > n, active = step === n;
           return (
             <div key={s} style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-              <div style={{ width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0, background: done || active ? "#0F172A" : "#fff", color: done || active ? "#fff" : "#94A3B8", border: `2px solid ${done || active ? "#0F172A" : "#E2E8F0"}` }}>{done ? "✓" : n}</div>
-              <span style={{ fontSize: 13, fontWeight: 500, color: done || active ? "#0F172A" : "#94A3B8" }}>{s}</span>
+              <div style={{ width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0, background: done || active ? "#0F172A" : "#fff", color: done || active ? "#fff" : "#94A3B8", border: `2px solid ${done || active ? "#0F172A" : "#E2E8F0"}` }}>{done ? "✓" : n}</div>
+              <span style={{ fontSize: 12, fontWeight: 500, color: done || active ? "#0F172A" : "#94A3B8" }}>{s}</span>
               {i < 2 && <div style={{ flex: 1, height: 2, background: done ? "#0F172A" : "#E2E8F0", margin: "0 8px" }} />}
             </div>
           );
