@@ -34,7 +34,8 @@ const MODELS = [
   "google/gemini-2.0-flash-001:free",
   "google/gemini-2.5-flash:free",
   "meta-llama/llama-4-maverick:free",
-  "deepseek/deepseek-chat-v3-0324:free",
+  "qwen/qwen3-235b-a22b:free",
+  "mistralai/mistral-small-3.1-24b-instruct:free",
 ];
 
 function readRawBody(req) {
