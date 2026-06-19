@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from "react";
 // Em produção: https://seu-projeto.vercel.app/api/extrair
 const API_URL = "/api/extrair";
 
-const MAX_RETRIES = 10;
+const MAX_RETRIES = 3;
 
 const REMETENTE = {
   razao_social: "SOLLARSUL ENERGIA SOLAR LTDA",
