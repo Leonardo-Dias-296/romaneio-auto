@@ -1,5 +1,5 @@
 // api/extrair.js — Vercel Serverless Function
-// A chave da API fica só aqui, nunca vai pro browser.
+// A chave da API (GEMINI_API_KEY) fica só aqui, nunca vai pro browser.
 
 export const config = {
   api: {
@@ -79,41 +79,39 @@ function parseMultipart(buffer, boundary) {
   return null;
 }
 
-async function callAnthropic(content, apiKey) {
+async function callGemini(parts, apiKey) {
   const MAX_RETRIES = 5;
   let lastError;
 
   for (let i = 0; i < MAX_RETRIES; i++) {
     if (i > 0) await new Promise((r) => setTimeout(r, i < 3 ? 2000 : 5000));
 
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 1000,
-        system: "Você é um extrator de dados de notas fiscais. Responda APENAS com JSON válido, sem markdown.",
-        messages: [{ role: "user", content }],
-      }),
-    });
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts }],
+          generationConfig: {
+            temperature: 0,
+            maxOutputTokens: 1024,
+          },
+        }),
+      }
+    );
 
-    if (res.status === 429 || res.status === 529) {
-      lastError = new Error(`API sobrecarregada (${res.status})`);
+    if (res.status === 429) {
+      lastError = new Error("API sobrecarregada (429)");
       continue;
     }
     if (!res.ok) {
       const txt = await res.text();
-      throw new Error(`Erro Anthropic ${res.status}: ${txt}`);
+      throw new Error(`Erro Gemini ${res.status}: ${txt}`);
     }
 
     const data = await res.json();
-    const texto = data.content
-      .map((c) => c.text || "")
-      .join("")
+    const texto = (data.candidates?.[0]?.content?.parts?.[0]?.text || "")
       .replace(/```json|```/g, "")
       .trim();
 
@@ -130,12 +128,12 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ erro: "Método não permitido" });
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return res.status(500).json({ erro: "ANTHROPIC_API_KEY não configurada." });
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return res.status(500).json({ erro: "GEMINI_API_KEY não configurada." });
 
   try {
     const contentType = req.headers["content-type"] || "";
-    let content;
+    let parts;
 
     if (contentType.includes("multipart/form-data")) {
       // PDF ou imagem
@@ -147,26 +145,27 @@ export default async function handler(req, res) {
       if (!file) return res.status(400).json({ erro: "Campo 'arquivo' não encontrado no form." });
 
       const base64 = file.buffer.toString("base64");
-      const isPdf = file.mimetype === "application/pdf";
 
-      content = [
+      parts = [
         {
-          type: isPdf ? "document" : "image",
-          source: { type: "base64", media_type: file.mimetype, data: base64 },
+          inlineData: {
+            mimeType: file.mimetype,
+            data: base64,
+          },
         },
-        { type: "text", text: PROMPT },
+        { text: PROMPT },
       ];
     } else if (contentType.includes("application/json")) {
       // XML ou TXT
       const rawBody = await readRawBody(req);
       const { texto } = JSON.parse(rawBody.toString());
       if (!texto) return res.status(400).json({ erro: "Campo 'texto' ausente." });
-      content = [{ type: "text", text: `${PROMPT}\n\nConteúdo da NF:\n${texto}` }];
+      parts = [{ text: `${PROMPT}\n\nConteúdo da NF:\n${texto}` }];
     } else {
       return res.status(400).json({ erro: "Content-Type não suportado." });
     }
 
-    const resultado = await callAnthropic(content, apiKey);
+    const resultado = await callGemini(parts, apiKey);
     return res.status(200).json(resultado);
   } catch (err) {
     console.error("[extrair]", err.message);
