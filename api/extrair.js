@@ -31,12 +31,19 @@ Responda APENAS com JSON válido, sem markdown, sem blocos de código, sem qualq
 Se um campo não existir no documento, use null.`;
 
 const MODELS = [
+  "google/gemini-2.5-flash",
+  "google/gemini-2.5-flash-lite",
+  "google/gemini-3.5-flash",
+  "xiaomi/mimo-v2.5",
   "google/gemma-4-31b-it:free",
   "google/gemma-4-26b-a4b-it:free",
   "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   "nvidia/nemotron-nano-12b-v2-vl:free",
   "nex-agi/nex-n2-pro:free",
   "nvidia/nemotron-3.5-content-safety:free",
+  "openai/gpt-oss-120b:free",
+  "openai/gpt-oss-20b:free",
+  "nousresearch/hermes-3-llama-3.1-405b:free",
 ];
 
 function readRawBody(req) {
