@@ -30,14 +30,12 @@ async function ensureLibs() {
 }
 async function elementToOutput(element, opts = {}) {
   await ensureLibs();
-  const { width = 794, scale = 2, pageSize } = opts;
+  const { scale = 2, pageSize } = opts;
   const canvas = await window.html2canvas(element, {
     scale,
     useCORS: true,
     backgroundColor: "#ffffff",
     logging: false,
-    width,
-    windowWidth: width,
   });
 
   const dataUrl = canvas.toDataURL("image/png");
@@ -130,7 +128,7 @@ function PreviewModal({ imgDataUrl, pdfBlob, filename, onClose }) {
 // ── Romaneio Document ──────────────────────────────────────────
 function RomaneioDoc({ dados, forCapture }) {
   const style = forCapture
-    ? { width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: "28px 32px" }
+    ? { width: "100%", background: "#fff", fontFamily: "Arial, sans-serif", padding: "28px 32px" }
     : { background: "#fff", border: "1px solid #CBD5E1", borderRadius: 10, overflow: "hidden" };
 
   const thStyle = { background: "#0F172A", color: "#fff", fontWeight: 700, fontSize: 11, padding: "6px 12px", textTransform: "uppercase", letterSpacing: "1.5px", textAlign: "left" };
@@ -300,12 +298,8 @@ export default function App() {
     setBusy(true);
     try {
       const pageSize = currentPageSize();
-      const pxPerMm = 3.78; // approx px per mm at 96dpi
       const scale = 2;
-      const cssWidth = Math.max(400, Math.round(pageSize.widthMm * pxPerMm));
-      const renderWidth = Math.round(cssWidth * scale);
-      // ensure the hidden capture element has the matching width set (done by wrapper style)
-      const { blob, dataUrl } = await elementToOutput(ref.current, { width: renderWidth, scale, pageSize });
+      const { blob, dataUrl } = await elementToOutput(ref.current, { scale, pageSize });
       setModal({ imgDataUrl: dataUrl, pdfBlob: blob, filename });
     } catch (err) { alert("Erro: " + err.message); }
     finally { setBusy(false); }
@@ -314,11 +308,8 @@ export default function App() {
     setBusy(true);
     try {
       const pageSize = currentPageSize();
-      const pxPerMm = 3.78; // approx px per mm at 96dpi
       const scale = 2;
-      const cssWidth = Math.max(400, Math.round(pageSize.widthMm * pxPerMm));
-      const renderWidth = Math.round(cssWidth * scale);
-      const { blob } = await elementToOutput(ref.current, { width: renderWidth, scale, pageSize });
+      const { blob } = await elementToOutput(ref.current, { scale, pageSize });
       downloadBlob(blob, filename);
     } catch (err) { alert("Erro: " + err.message); }
     finally { setBusy(false); }
