@@ -1,6 +1,5 @@
 // api/extrair.js — Vercel Serverless Function
-// Agora usando a API gratuita do Google Gemini.
-// A chave fica só aqui, nunca vai pro browser.
+// A chave da API fica só aqui, nunca vai pro browser.
 
 export const config = {
   api: {
@@ -9,14 +8,12 @@ export const config = {
   },
 };
 
-const PROMPT = `Você é um extrator de dados de notas fiscais brasileiras. Analise este documento e extraia EXATAMENTE estes campos (responda apenas com JSON válido):
+const PROMPT = `Você é um extrator de dados de notas fiscais brasileiras. Analise este documento e extraia EXATAMENTE estes campos:
 
 {
   "transportadora": "nome completo da transportadora",
   "cnpj_transp": "CNPJ da transportadora no formato XX.XXX.XXX/XXXX-XX",
-  "endereco_transp": "endereço completo da transportadora incluindo logradouro, número (se houver), bairro, cidade e UF (formato: 'Rua X, 123 - Bairro - Cidade/UF')",
-  "cidade": "nome da cidade da transportadora (apenas o nome, ex: Taquari)",
-  "uf": "sigla da unidade federativa (ex: RS)",
+  "endereco_transp": "endereço completo da transportadora",
   "telefone_transp": "telefone da transportadora com DDD",
   "nome_motorista": "nome completo do motorista",
   "cpf_motorista": "CPF ou RG do motorista",
@@ -30,15 +27,8 @@ const PROMPT = `Você é um extrator de dados de notas fiscais brasileiras. Anal
   "observacoes": "observações relevantes"
 }
 
-Regras importantes:
-- Retorne SOMENTE o JSON acima, sem comentários, texto extra ou formatação Markdown.
-- Garanta que `endereco_transp` contenha cidade e UF quando disponíveis. Se a cidade ou UF não forem encontradas no documento, coloque esses campos como null.
-- Se um campo não existir no documento, use null.`;
-
-// Modelo gratuito do Gemini. Se este ficar com cota esgotada,
-// troque para "gemini-2.5-flash" ou outro modelo disponível
-// na sua conta em https://aistudio.google.com
-const GEMINI_MODEL = "gemini-2.5-flash";
+Responda APENAS com JSON válido, sem markdown, sem blocos de código, sem qualquer texto adicional.
+Se um campo não existir no documento, use null.`;
 
 // Lê o body cru da request (Buffer)
 function readRawBody(req) {
@@ -89,49 +79,43 @@ function parseMultipart(buffer, boundary) {
   return null;
 }
 
-// content: array de "parts" no formato da Gemini API
-// ex: [{ inlineData: { mimeType, data } }, { text: "..." }]
-async function callGemini(parts, apiKey) {
+async function callAnthropic(content, apiKey) {
   const MAX_RETRIES = 5;
   let lastError;
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
   for (let i = 0; i < MAX_RETRIES; i++) {
     if (i > 0) await new Promise((r) => setTimeout(r, i < 3 ? 2000 : 5000));
 
-    const res = await fetch(url, {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        contents: [{ role: "user", parts }],
-        generationConfig: {
-          // Força a resposta a ser JSON válido, sem precisar
-          // pedir isso no prompt nem limpar markdown depois.
-          responseMimeType: "application/json",
-        },
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        system: "Você é um extrator de dados de notas fiscais. Responda APENAS com JSON válido, sem markdown.",
+        messages: [{ role: "user", content }],
       }),
     });
 
-    if (res.status === 429 || res.status === 503) {
-      lastError = new Error(`Gemini sobrecarregado (${res.status})`);
+    if (res.status === 429 || res.status === 529) {
+      lastError = new Error(`API sobrecarregada (${res.status})`);
       continue;
     }
     if (!res.ok) {
       const txt = await res.text();
-      throw new Error(`Erro Gemini ${res.status}: ${txt}`);
+      throw new Error(`Erro Anthropic ${res.status}: ${txt}`);
     }
 
     const data = await res.json();
-    const texto = data?.candidates?.[0]?.content?.parts
-      ?.map((p) => p.text || "")
+    const texto = data.content
+      .map((c) => c.text || "")
       .join("")
+      .replace(/```json|```/g, "")
       .trim();
-
-    if (!texto) throw new Error("Resposta vazia do Gemini.");
 
     return JSON.parse(texto);
   }
@@ -146,12 +130,12 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ erro: "Método não permitido" });
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return res.status(500).json({ erro: "GEMINI_API_KEY não configurada." });
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return res.status(500).json({ erro: "ANTHROPIC_API_KEY não configurada." });
 
   try {
     const contentType = req.headers["content-type"] || "";
-    let parts;
+    let content;
 
     if (contentType.includes("multipart/form-data")) {
       // PDF ou imagem
@@ -163,22 +147,26 @@ export default async function handler(req, res) {
       if (!file) return res.status(400).json({ erro: "Campo 'arquivo' não encontrado no form." });
 
       const base64 = file.buffer.toString("base64");
+      const isPdf = file.mimetype === "application/pdf";
 
-      parts = [
-        { inlineData: { mimeType: file.mimetype, data: base64 } },
-        { text: PROMPT },
+      content = [
+        {
+          type: isPdf ? "document" : "image",
+          source: { type: "base64", media_type: file.mimetype, data: base64 },
+        },
+        { type: "text", text: PROMPT },
       ];
     } else if (contentType.includes("application/json")) {
       // XML ou TXT
       const rawBody = await readRawBody(req);
       const { texto } = JSON.parse(rawBody.toString());
       if (!texto) return res.status(400).json({ erro: "Campo 'texto' ausente." });
-      parts = [{ text: `${PROMPT}\n\nConteúdo da NF:\n${texto}` }];
+      content = [{ type: "text", text: `${PROMPT}\n\nConteúdo da NF:\n${texto}` }];
     } else {
       return res.status(400).json({ erro: "Content-Type não suportado." });
     }
 
-    const resultado = await callGemini(parts, apiKey);
+    const resultado = await callAnthropic(content, apiKey);
     return res.status(200).json(resultado);
   } catch (err) {
     console.error("[extrair]", err.message);
