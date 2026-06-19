@@ -9,12 +9,14 @@ export const config = {
   },
 };
 
-const PROMPT = `Você é um extrator de dados de notas fiscais brasileiras. Analise este documento e extraia EXATAMENTE estes campos:
+const PROMPT = `Você é um extrator de dados de notas fiscais brasileiras. Analise este documento e extraia EXATAMENTE estes campos (responda apenas com JSON válido):
 
 {
   "transportadora": "nome completo da transportadora",
   "cnpj_transp": "CNPJ da transportadora no formato XX.XXX.XXX/XXXX-XX",
-  "endereco_transp": "endereço completo da transportadora",
+  "endereco_transp": "endereço completo da transportadora incluindo logradouro, número (se houver), bairro, cidade e UF (formato: 'Rua X, 123 - Bairro - Cidade/UF')",
+  "cidade": "nome da cidade da transportadora (apenas o nome, ex: Taquari)",
+  "uf": "sigla da unidade federativa (ex: RS)",
   "telefone_transp": "telefone da transportadora com DDD",
   "nome_motorista": "nome completo do motorista",
   "cpf_motorista": "CPF ou RG do motorista",
@@ -28,7 +30,10 @@ const PROMPT = `Você é um extrator de dados de notas fiscais brasileiras. Anal
   "observacoes": "observações relevantes"
 }
 
-Se um campo não existir no documento, use null.`;
+Regras importantes:
+- Retorne SOMENTE o JSON acima, sem comentários, texto extra ou formatação Markdown.
+- Garanta que `endereco_transp` contenha cidade e UF quando disponíveis. Se a cidade ou UF não forem encontradas no documento, coloque esses campos como null.
+- Se um campo não existir no documento, use null.`;
 
 // Modelo gratuito do Gemini. Se este ficar com cota esgotada,
 // troque para "gemini-2.5-flash" ou outro modelo disponível

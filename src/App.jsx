@@ -30,19 +30,42 @@ async function ensureLibs() {
 }
 async function elementToOutput(element, opts = {}) {
   await ensureLibs();
-  const { width = 794, scale = 2 } = opts;
+  const { width = 794, scale = 2, pageSize } = opts;
   const canvas = await window.html2canvas(element, {
-    scale, useCORS: true, backgroundColor: "#ffffff", logging: false,
-    width, windowWidth: width,
+    scale,
+    useCORS: true,
+    backgroundColor: "#ffffff",
+    logging: false,
+    width,
+    windowWidth: width,
   });
+
   const dataUrl = canvas.toDataURL("image/png");
   const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pdf = pageSize && pageSize.widthMm && pageSize.heightMm
+    ? new jsPDF({ orientation: "portrait", unit: "mm", format: [Number(pageSize.widthMm), Number(pageSize.heightMm)] })
+    : new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
   const pageW = pdf.internal.pageSize.getWidth();
-  const margin = 10;
-  const contentW = pageW - margin * 2;
-  const contentH = (canvas.height / canvas.width) * contentW;
-  pdf.addImage(dataUrl, "PNG", margin, margin, contentW, contentH, "", "FAST");
+  const pageH = pdf.internal.pageSize.getHeight();
+  const margin = 10; // mm
+  // largura disponível para o conteúdo
+  let contentW = pageW - margin * 2;
+  // converte proporção do canvas para altura em mm
+  let contentH = (canvas.height / canvas.width) * contentW;
+
+  // Se a altura calculada extrapolar a altura imprimível, reduz proporcionalmente
+  const maxContentH = pageH - margin * 2;
+  if (contentH > maxContentH) {
+    const scaleFactor = maxContentH / contentH;
+    contentW = contentW * scaleFactor;
+    contentH = contentH * scaleFactor;
+  }
+
+  // centraliza horizontalmente
+  const x = (pageW - contentW) / 2;
+  const y = margin;
+  pdf.addImage(dataUrl, "PNG", x, y, contentW, contentH, "", "FAST");
   return { blob: pdf.output("blob"), dataUrl };
 }
 function downloadBlob(blob, filename) {
@@ -249,6 +272,9 @@ function EtiquetasCapture({ dados }) {
 export default function App() {
   const [step, setStep] = useState(1);
   const [tab, setTab] = useState("romaneio");
+  const [pagePreset, setPagePreset] = useState("A4");
+  const [customWidth, setCustomWidth] = useState(210);
+  const [customHeight, setCustomHeight] = useState(297);
   const [dados, setDados] = useState({});
   const [tentativas, setTentativas] = useState(0);
   const [statusMsg, setStatusMsg] = useState("");
@@ -260,13 +286,26 @@ export default function App() {
 
   useEffect(() => { if (step === 3) ensureLibs().catch(() => {}); }, [step]);
 
+  // helper: current page size in mm
+  function currentPageSize() {
+    if (pagePreset === "custom") return { widthMm: Number(customWidth), heightMm: Number(customHeight) };
+    if (pagePreset === "letter") return { widthMm: 216, heightMm: 279 };
+    return { widthMm: 210, heightMm: 297 };
+  }
+
   const nfSlug = dados.numero_nf ? dados.numero_nf.replace(/\D/g, "") : Date.now().toString().slice(-6);
   const totalLabels = parseInt(dados.quantidade_volumes) || 1;
 
   async function handlePreview(ref, filename) {
     setBusy(true);
     try {
-      const { blob, dataUrl } = await elementToOutput(ref.current, { width: 794 });
+      const pageSize = currentPageSize();
+      const pxPerMm = 3.78; // approx px per mm at 96dpi
+      const scale = 2;
+      const cssWidth = Math.max(400, Math.round(pageSize.widthMm * pxPerMm));
+      const renderWidth = Math.round(cssWidth * scale);
+      // ensure the hidden capture element has the matching width set (done by wrapper style)
+      const { blob, dataUrl } = await elementToOutput(ref.current, { width: renderWidth, scale, pageSize });
       setModal({ imgDataUrl: dataUrl, pdfBlob: blob, filename });
     } catch (err) { alert("Erro: " + err.message); }
     finally { setBusy(false); }
@@ -274,7 +313,12 @@ export default function App() {
   async function handleDownload(ref, filename) {
     setBusy(true);
     try {
-      const { blob } = await elementToOutput(ref.current, { width: 794 });
+      const pageSize = currentPageSize();
+      const pxPerMm = 3.78; // approx px per mm at 96dpi
+      const scale = 2;
+      const cssWidth = Math.max(400, Math.round(pageSize.widthMm * pxPerMm));
+      const renderWidth = Math.round(cssWidth * scale);
+      const { blob } = await elementToOutput(ref.current, { width: renderWidth, scale, pageSize });
       downloadBlob(blob, filename);
     } catch (err) { alert("Erro: " + err.message); }
     finally { setBusy(false); }
@@ -317,6 +361,22 @@ export default function App() {
             throw new Error(err.erro || `Erro HTTP ${res.status}`);
           }
           const parsed = await res.json();
+          // Se o extrator retornou cidade/uf separadamente, garanta que
+          // `endereco_transp` contenha "Cidade/UF" ao final.
+          try {
+            const cidade = parsed.cidade && String(parsed.cidade).trim();
+            const uf = parsed.uf && String(parsed.uf).trim();
+            let endereco = parsed.endereco_transp && String(parsed.endereco_transp).trim();
+            if ((cidade || uf) && endereco) {
+              const cidadeUf = [cidade, uf].filter(Boolean).join("/");
+              if (!endereco.includes(cidade) && !endereco.includes(uf)) {
+                endereco = `${endereco} - ${cidadeUf}`;
+              }
+              parsed.endereco_transp = endereco;
+            }
+          } catch (e) {
+            // ignore and use raw parsed
+          }
           setDados(parsed);
           setStep(3);
           return;
@@ -334,14 +394,21 @@ export default function App() {
     <div style={{ fontFamily: "'Inter', Arial, sans-serif", minHeight: "100vh", background: "#F1F5F9", color: "#0F172A" }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
-      {step === 3 && (<>
-        <div ref={romaneioRef} style={{ position: "absolute", left: -9999, top: 0, zIndex: -1 }}>
-          <RomaneioDoc dados={dados} forCapture />
-        </div>
-        <div ref={etiquetasRef} style={{ position: "absolute", left: -9999, top: 0, zIndex: -1 }}>
-          <EtiquetasCapture dados={dados} />
-        </div>
-      </>)}
+      {step === 3 && (() => {
+        const pageSize = currentPageSize();
+        const pxPerMm = 3.78;
+        const cssWidth = Math.max(400, Math.round(pageSize.widthMm * pxPerMm));
+        return (
+          <>
+            <div ref={romaneioRef} style={{ position: "absolute", left: -9999, top: 0, zIndex: -1, width: cssWidth }}>
+              <RomaneioDoc dados={dados} forCapture />
+            </div>
+            <div ref={etiquetasRef} style={{ position: "absolute", left: -9999, top: 0, zIndex: -1, width: cssWidth }}>
+              <EtiquetasCapture dados={dados} />
+            </div>
+          </>
+        );
+      })()}
 
       {modal && <PreviewModal imgDataUrl={modal.imgDataUrl} pdfBlob={modal.pdfBlob} filename={modal.filename} onClose={() => setModal(null)} />}
 
@@ -458,8 +525,26 @@ export default function App() {
                 </div>
                 <RomaneioDoc dados={dados} />
                 <div style={{ gridColumn: "1/-1", display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <Btn busy={busy} onClick={() => handlePreview(romaneioRef, `romaneio-${nfSlug}.pdf`)}>Visualizar / Imprimir</Btn>
-                  <Btn busy={busy} color="#334155" onClick={() => handleDownload(romaneioRef, `romaneio-${nfSlug}.pdf`)}>Baixar PDF</Btn>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ fontSize: 12, color: "#64748B", fontWeight: 700 }}>Tamanho da página:</div>
+                    <select value={pagePreset} onChange={e => setPagePreset(e.target.value)} style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid #E2E8F0", background: "#fff" }}>
+                      <option value="A4">A4 (210×297 mm)</option>
+                      <option value="letter">Letter (216×279 mm)</option>
+                      <option value="custom">Custom (mm)</option>
+                    </select>
+                    {pagePreset === "custom" && (
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <input value={customWidth} onChange={e => setCustomWidth(e.target.value)} style={{ width: 64, padding: "6px 8px", borderRadius: 6, border: "1px solid #E2E8F0" }} />
+                        <span style={{ color: "#64748B" }}>×</span>
+                        <input value={customHeight} onChange={e => setCustomHeight(e.target.value)} style={{ width: 64, padding: "6px 8px", borderRadius: 6, border: "1px solid #E2E8F0" }} />
+                        <span style={{ color: "#94A3B8", fontSize: 12 }}>mm</span>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <Btn busy={busy} onClick={() => handlePreview(romaneioRef, `romaneio-${nfSlug}.pdf`)}>Visualizar / Imprimir</Btn>
+                    <Btn busy={busy} color="#334155" onClick={() => handleDownload(romaneioRef, `romaneio-${nfSlug}.pdf`)}>Baixar PDF</Btn>
+                  </div>
                   <Btn color="#F1F5F9" textColor="#0F172A" onClick={() => { setStep(1); setDados({}); }}>Nova Nota Fiscal</Btn>
                 </div>
               </div>
