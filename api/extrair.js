@@ -84,7 +84,7 @@ async function callGemini(parts, apiKey) {
   let lastError;
 
   for (let i = 0; i < MAX_RETRIES; i++) {
-    if (i > 0) await new Promise((r) => setTimeout(r, 5000 * i));
+    if (i > 0) await new Promise((r) => setTimeout(r, i * 15000));
 
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
