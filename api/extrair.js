@@ -37,9 +37,6 @@ const MODELS = [
   "google/gemma-4-31b-it:free",
   "nex-agi/nex-n2-pro:free",
   "nvidia/nemotron-3.5-content-safety:free",
-  "openai/gpt-oss-20b:free",
-  "openai/gpt-oss-120b:free",
-  "nousresearch/hermes-3-llama-3.1-405b:free",
 ];
 
 function readRawBody(req) {
