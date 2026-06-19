@@ -80,7 +80,7 @@ function parseMultipart(buffer, boundary) {
 }
 
 async function callGemini(parts, apiKey) {
-  const MAX_RETRIES = 5;
+  const MAX_RETRIES = 3;
   let lastError;
 
   for (let i = 0; i < MAX_RETRIES; i++) {
