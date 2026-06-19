@@ -391,7 +391,8 @@ export default function App() {
   const wizardSteps = ["Enviar NF", "Processando", "Resultado"];
 
   return (
-    <div style={{ fontFamily: "'Inter', Arial, sans-serif", minHeight: "100vh", background: "#F1F5F9", color: "#0F172A" }}>
+    <div style={{ fontFamily: "'Inter', Arial, sans-serif", minHeight: "100vh", background: "#F1F5F9", color: "#0F172A", position: "relative" }}>
+      <div style={{ position: "fixed", inset: 0, backgroundImage: "url(/image.png)", backgroundSize: "cover", backgroundPosition: "center", opacity: 0.08, pointerEvents: "none", zIndex: 0 }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       {step === 3 && (() => {
@@ -413,13 +414,13 @@ export default function App() {
       {modal && <PreviewModal imgDataUrl={modal.imgDataUrl} pdfBlob={modal.pdfBlob} filename={modal.filename} onClose={() => setModal(null)} />}
 
       {/* Header */}
-      <div style={{ background: "#0F172A", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 28px" }}>
+      <div style={{ background: "#0F172A", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 28px", position: "relative", zIndex: 1 }}>
         <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>Grupo Sollar - Friclim</div>
         <span style={{ color: "rgba(255,255,255,.85)", fontSize: 14, fontWeight: 600 }}>RomaneioAuto</span>
       </div>
 
       {/* Wizard */}
-      <div style={{ background: "#fff", borderBottom: "1px solid #E2E8F0", padding: "14px 28px", display: "flex" }}>
+      <div style={{ background: "#fff", borderBottom: "1px solid #E2E8F0", padding: "14px 28px", display: "flex", position: "relative", zIndex: 1 }}>
         {wizardSteps.map((s, i) => {
           const n = i + 1, done = step > n, active = step === n;
           return (
@@ -432,7 +433,7 @@ export default function App() {
         })}
       </div>
 
-      <div style={{ padding: 28, maxWidth: 1200, margin: "0 auto" }}>
+      <div style={{ padding: 28, maxWidth: 1200, margin: "0 auto", position: "relative", zIndex: 1 }}>
 
         {/* STEP 1 */}
         {step === 1 && (
