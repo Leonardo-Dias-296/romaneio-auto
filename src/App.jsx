@@ -476,7 +476,7 @@ export default function App() {
 
       {/* Header */}
       <div style={{ background: "#0F172A", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 28px", position: "relative", zIndex: 1 }}>
-        <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>Grupo Sollar</div>
+        <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>Grupo Sollar - Friclim</div>
         <span style={{ color: "rgba(255,255,255,.85)", fontSize: 14, fontWeight: 600 }}>RomaneioAuto</span>
       </div>
 
