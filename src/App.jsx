@@ -526,6 +526,7 @@ export default function App() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               transportadora: shared.transportadora,
+              cnpj_transp: shared.cnpj_transp || "",
               cidade_transp: shared.cidade_transp || "",
               uf_transp: shared.uf_transp || "",
             }),
