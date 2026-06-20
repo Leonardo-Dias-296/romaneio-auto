@@ -263,30 +263,52 @@ export default async function handler(req, res) {
       return res.status(400).json({ erro: "Content-Type não suportado." });
     }
 
-    // 1) Groq — super rápido
-    if (groqKey) {
-      try {
-        const resultado = await callGroq(groqMessages, groqKey);
-        return res.status(200).json(resultado);
-      } catch (err) {
-        console.warn("[extrair] Groq falhou:", err.message);
+    if (isImage) {
+      // IMAGEM: Gemini → Groq → OpenRouter
+      if (geminiKey) {
+        try {
+          const resultado = await callGemini(geminiParts, geminiKey);
+          return res.status(200).json(resultado);
+        } catch (err) {
+          console.warn("[extrair] Gemini falhou:", err.message);
+        }
+      }
+      if (groqKey) {
+        try {
+          const resultado = await callGroq(groqMessages, groqKey);
+          return res.status(200).json(resultado);
+        } catch (err) {
+          console.warn("[extrair] Groq falhou:", err.message);
+        }
+      }
+    } else {
+      // TEXTO: Groq → Gemini → OpenRouter
+      if (groqKey) {
+        try {
+          const resultado = await callGroq(groqMessages, groqKey);
+          return res.status(200).json(resultado);
+        } catch (err) {
+          console.warn("[extrair] Groq falhou:", err.message);
+        }
+      }
+      if (geminiKey) {
+        try {
+          const resultado = await callGemini(geminiParts, geminiKey);
+          return res.status(200).json(resultado);
+        } catch (err) {
+          console.warn("[extrair] Gemini falhou:", err.message);
+        }
       }
     }
 
-    // 2) Gemini
-    if (geminiKey) {
-      try {
-        const resultado = await callGemini(geminiParts, geminiKey);
-        return res.status(200).json(resultado);
-      } catch (err) {
-        console.warn("[extrair] Gemini falhou:", err.message);
-      }
-    }
-
-    // 3) OpenRouter
+    // OpenRouter (último recurso)
     if (orKey) {
-      const resultado = await callOpenRouter(orMessages, orKey, orModels);
-      return res.status(200).json(resultado);
+      try {
+        const resultado = await callOpenRouter(orMessages, orKey, orModels);
+        return res.status(200).json(resultado);
+      } catch (err) {
+        console.warn("[extrair] OpenRouter falhou:", err.message);
+      }
     }
 
     return res.status(500).json({ erro: "Todas as APIs falharam." });
