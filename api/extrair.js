@@ -1,5 +1,5 @@
 // api/extrair.js — Vercel Serverless Function
-// GEMINI_API_KEY (principal) e OPENROUTER_API_KEY (fallback) ficam só aqui.
+// GROQ_API_KEY (principal), GEMINI_API_KEY (fallback), OPENROUTER_API_KEY (último recurso)
 
 export const config = {
   api: {
@@ -36,7 +36,6 @@ const OR_VISION_MODELS = [
   "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   "google/gemma-4-31b-it:free",
   "nex-agi/nex-n2-pro:free",
-  "nvidia/nemotron-3.5-content-safety:free",
 ];
 
 const OR_TEXT_MODELS = [
@@ -92,7 +91,35 @@ function parseMultipart(buffer, boundary) {
   return null;
 }
 
-// ── Gemini API (principal) ─────────────────────────────────────
+// ── Groq (principal — super rápido) ───────────────────────────
+async function callGroq(messages, apiKey) {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      messages,
+      temperature: 0,
+      max_tokens: 1024,
+    }),
+  });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Groq ${res.status}: ${txt}`);
+  }
+
+  const data = await res.json();
+  const texto = (data.choices?.[0]?.message?.content || "")
+    .replace(/```json|```/g, "")
+    .trim();
+  return JSON.parse(texto);
+}
+
+// ── Gemini (fallback 1) ──────────────────────────────────────
 async function callGemini(parts, apiKey) {
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
@@ -118,7 +145,7 @@ async function callGemini(parts, apiKey) {
   return JSON.parse(texto);
 }
 
-// ── OpenRouter (fallback) ─────────────────────────────────────
+// ── OpenRouter (fallback 2) ──────────────────────────────────
 async function callOpenRouter(messages, apiKey, models) {
   let lastError;
 
@@ -171,17 +198,20 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ erro: "Método não permitido" });
 
+  const groqKey = process.env.GROQ_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY;
   const orKey = process.env.OPENROUTER_API_KEY;
-  if (!geminiKey && !orKey) {
+  if (!groqKey && !geminiKey && !orKey) {
     return res.status(500).json({ erro: "Nenhuma API key configurada." });
   }
 
   try {
     const contentType = req.headers["content-type"] || "";
     let geminiParts;
+    let groqMessages;
     let orMessages;
     let orModels;
+    let isImage = false;
 
     if (contentType.includes("multipart/form-data")) {
       const boundary = parseBoundary(contentType);
@@ -192,12 +222,24 @@ export default async function handler(req, res) {
       if (!file) return res.status(400).json({ erro: "Campo 'arquivo' não encontrado no form." });
 
       const base64 = file.buffer.toString("base64");
+      isImage = true;
 
+      // Groq (OpenAI format com image)
+      groqMessages = [{
+        role: "user",
+        content: [
+          { type: "image_url", image_url: { url: `data:${file.mimetype};base64,${base64}` } },
+          { type: "text", text: PROMPT },
+        ],
+      }];
+
+      // Gemini
       geminiParts = [
         { inlineData: { mimeType: file.mimetype, data: base64 } },
         { text: PROMPT },
       ];
 
+      // OpenRouter
       orMessages = [{
         role: "user",
         content: [
@@ -211,24 +253,37 @@ export default async function handler(req, res) {
       const { texto } = JSON.parse(rawBody.toString());
       if (!texto) return res.status(400).json({ erro: "Campo 'texto' ausente." });
 
-      geminiParts = [{ text: `${PROMPT}\n\nConteúdo da NF:\n${texto}` }];
-      orMessages = [{ role: "user", content: [{ type: "text", text: `${PROMPT}\n\nConteúdo da NF:\n${texto}` }] }];
+      const textContent = `${PROMPT}\n\nConteúdo da NF:\n${texto}`;
+
+      groqMessages = [{ role: "user", content: [{ type: "text", text: textContent }] }];
+      geminiParts = [{ text: textContent }];
+      orMessages = [{ role: "user", content: [{ type: "text", text: textContent }] }];
       orModels = [...OR_VISION_MODELS, ...OR_TEXT_MODELS];
     } else {
       return res.status(400).json({ erro: "Content-Type não suportado." });
     }
 
-    // 1) Tenta Gemini primeiro
+    // 1) Groq — super rápido
+    if (groqKey) {
+      try {
+        const resultado = await callGroq(groqMessages, groqKey);
+        return res.status(200).json(resultado);
+      } catch (err) {
+        console.warn("[extrair] Groq falhou:", err.message);
+      }
+    }
+
+    // 2) Gemini
     if (geminiKey) {
       try {
         const resultado = await callGemini(geminiParts, geminiKey);
         return res.status(200).json(resultado);
       } catch (err) {
-        console.warn("[extrair] Gemini falhou, tentando OpenRouter:", err.message);
+        console.warn("[extrair] Gemini falhou:", err.message);
       }
     }
 
-    // 2) Fallback: OpenRouter
+    // 3) OpenRouter
     if (orKey) {
       const resultado = await callOpenRouter(orMessages, orKey, orModels);
       return res.status(200).json(resultado);
