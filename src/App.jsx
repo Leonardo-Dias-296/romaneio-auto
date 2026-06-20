@@ -315,10 +315,33 @@ export default function App() {
     finally { setBusy(false); }
   }
 
+  // ── Converte PDF para imagem (JPEG) antes de enviar ──────────
+  async function pdfToImage(file) {
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
+    const pdfjsLib = window.pdfjsLib;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const page = await pdf.getPage(1);
+
+    const viewport = page.getViewport({ scale: 2 });
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve(new File([blob], file.name.replace(/\.pdf$/i, ".jpg"), { type: "image/jpeg" }));
+      }, "image/jpeg", 0.85);
+    });
+  }
+
   // ── Comprime imagem antes de enviar ──────────────────────────
   function compressImage(file) {
     return new Promise((resolve) => {
-      if (file.type === "application/pdf" || !file.type.startsWith("image/")) {
+      if (!file.type.startsWith("image/")) {
         resolve(file);
         return;
       }
@@ -368,9 +391,15 @@ export default function App() {
           body: JSON.stringify({ texto }),
         };
       } else {
+        let sendFile = file;
+        if (file.type === "application/pdf") {
+          setStatusMsg("Convertendo PDF para imagem...");
+          sendFile = await pdfToImage(file);
+        } else {
+          sendFile = await compressImage(file);
+        }
         const form = new FormData();
-        const compressed = await compressImage(file);
-        form.append("arquivo", compressed);
+        form.append("arquivo", sendFile);
         fetchOpts = { method: "POST", body: form };
       }
 
