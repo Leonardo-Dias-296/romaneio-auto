@@ -262,12 +262,14 @@ export default async function handler(req, res) {
     }
 
     // Groq → Gemini → OpenRouter (para imagem e texto)
+    const errors = [];
     if (groqKey) {
       try {
         const resultado = await callGroq(groqMessages, groqKey);
         return res.status(200).json(resultado);
       } catch (err) {
         console.warn("[extrair] Groq falhou:", err.message);
+        errors.push("Groq: " + err.message);
       }
     }
 
@@ -277,6 +279,7 @@ export default async function handler(req, res) {
         return res.status(200).json(resultado);
       } catch (err) {
         console.warn("[extrair] Gemini falhou:", err.message);
+        errors.push("Gemini: " + err.message);
       }
     }
 
@@ -286,10 +289,11 @@ export default async function handler(req, res) {
         return res.status(200).json(resultado);
       } catch (err) {
         console.warn("[extrair] OpenRouter falhou:", err.message);
+        errors.push("OpenRouter: " + err.message);
       }
     }
 
-    return res.status(500).json({ erro: "Todas as APIs falharam." });
+    return res.status(500).json({ erro: "Todas as APIs falharam: " + errors.join(" | ") });
   } catch (err) {
     console.error("[extrair]", err.message);
     return res.status(500).json({ erro: err.message });
