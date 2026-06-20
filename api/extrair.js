@@ -36,6 +36,7 @@ const OR_VISION_MODELS = [
   "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   "google/gemma-4-31b-it:free",
   "nex-agi/nex-n2-pro:free",
+  "xiaomi/mimo-v2.5",
 ];
 
 const OR_TEXT_MODELS = [
