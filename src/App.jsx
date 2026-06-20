@@ -141,14 +141,14 @@ function RomaneioDoc({ dados, forCapture }) {
   return (
     <div style={style}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, paddingBottom: 10, borderBottom: "2px solid #0F172A", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <img src="/image.png" alt="Logo" style={{ height: forCapture ? 32 : 40, objectFit: "contain" }} />
+        <div style={{ minWidth: 0, flex: 1, display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <img src="/image.png" alt="Logo" style={{ height: forCapture ? 50 : 60, objectFit: "contain", flexShrink: 0 }} />
+          <div>
             <div style={{ fontSize: forCapture ? 14 : 17, fontWeight: 900, color: "#0F172A" }}>SOLLARSUL ENERGIA SOLAR LTDA</div>
+            <div style={{ fontSize: forCapture ? 10 : 12, color: "#475569", marginTop: 2 }}>CNPJ: {REMETENTE.cnpj}</div>
+            <div style={{ fontSize: forCapture ? 10 : 12, color: "#475569", marginTop: 1 }}>{REMETENTE.endereco}</div>
+            <div style={{ fontSize: forCapture ? 10 : 12, color: "#475569", marginTop: 1 }}>Tel: {REMETENTE.telefone}</div>
           </div>
-          <div style={{ fontSize: forCapture ? 10 : 12, color: "#475569", marginTop: 2 }}>CNPJ: {REMETENTE.cnpj}</div>
-          <div style={{ fontSize: forCapture ? 10 : 12, color: "#475569", marginTop: 1 }}>{REMETENTE.endereco}</div>
-          <div style={{ fontSize: forCapture ? 10 : 12, color: "#475569", marginTop: 1 }}>Tel: {REMETENTE.telefone}</div>
         </div>
         <div style={{ textAlign: "right", flexShrink: 0 }}>
           <div style={{ fontSize: forCapture ? 13 : 14, fontWeight: 900, color: "#0F172A", textTransform: "uppercase" }}>Romaneio de Carga</div>
