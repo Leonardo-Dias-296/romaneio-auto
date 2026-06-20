@@ -420,11 +420,10 @@ export default function App() {
             throw new Error(err.erro || `Erro HTTP ${res.status}`);
           }
           const parsed = await res.json();
-          // Se o extrator retornou cidade/uf separadamente, garanta que
-          // `endereco_transp` contenha "Cidade/UF" ao final.
+          // Junta cidade/uf ao endereço da transportadora
           try {
-            const cidade = parsed.cidade && String(parsed.cidade).trim();
-            const uf = parsed.uf && String(parsed.uf).trim();
+            const cidade = parsed.cidade_transp && String(parsed.cidade_transp).trim();
+            const uf = parsed.uf_transp && String(parsed.uf_transp).trim();
             let endereco = parsed.endereco_transp && String(parsed.endereco_transp).trim();
             if ((cidade || uf) && endereco) {
               const cidadeUf = [cidade, uf].filter(Boolean).join("/");

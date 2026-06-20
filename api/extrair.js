@@ -13,7 +13,9 @@ const PROMPT = `Você é um extrator de dados de notas fiscais brasileiras. Anal
 {
   "transportadora": "nome completo da transportadora",
   "cnpj_transp": "CNPJ da transportadora no formato XX.XXX.XXX/XXXX-XX",
-  "endereco_transp": "endereço completo da transportadora",
+  "endereco_transp": "endereço completo da transportadora (rua, número, bairro)",
+  "cidade_transp": "cidade da transportadora",
+  "uf_transp": "UF/estado da transportadora (sigla de 2 letras)",
   "telefone_transp": "telefone da transportadora com DDD",
   "nome_motorista": "nome completo do motorista",
   "cpf_motorista": "CPF ou RG do motorista",
