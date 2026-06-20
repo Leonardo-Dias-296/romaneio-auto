@@ -375,7 +375,7 @@ export default function App() {
 
         try {
           const res = await fetch(API_URL, fetchOpts);
-          if (res.status === 503 && i < MAX_RETRIES - 1) continue;
+          if ((res.status === 503 || res.status === 500) && i < MAX_RETRIES - 1) continue;
           if (!res.ok) {
             const err = await res.json().catch(() => ({ erro: res.statusText }));
             throw new Error(err.erro || `Erro HTTP ${res.status}`);
