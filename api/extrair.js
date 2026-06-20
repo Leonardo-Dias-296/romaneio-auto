@@ -30,13 +30,16 @@ const PROMPT = `Você é um extrator de dados de notas fiscais brasileiras. Anal
 Responda APENAS com JSON válido, sem markdown, sem blocos de código, sem qualquer texto adicional.
 Se um campo não existir no documento, use null.`;
 
-const OR_MODELS = [
+const OR_VISION_MODELS = [
   "google/gemma-4-26b-a4b-it:free",
   "nvidia/nemotron-nano-12b-v2-vl:free",
   "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   "google/gemma-4-31b-it:free",
   "nex-agi/nex-n2-pro:free",
   "nvidia/nemotron-3.5-content-safety:free",
+];
+
+const OR_TEXT_MODELS = [
   "openai/gpt-oss-20b:free",
   "openai/gpt-oss-120b:free",
   "nousresearch/hermes-3-llama-3.1-405b:free",
@@ -116,10 +119,10 @@ async function callGemini(parts, apiKey) {
 }
 
 // ── OpenRouter (fallback) ─────────────────────────────────────
-async function callOpenRouter(messages, apiKey) {
+async function callOpenRouter(messages, apiKey, models) {
   let lastError;
 
-  for (const model of OR_MODELS) {
+  for (const model of models) {
     try {
       const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
@@ -178,6 +181,7 @@ export default async function handler(req, res) {
     const contentType = req.headers["content-type"] || "";
     let geminiParts;
     let orMessages;
+    let orModels;
 
     if (contentType.includes("multipart/form-data")) {
       const boundary = parseBoundary(contentType);
@@ -189,13 +193,11 @@ export default async function handler(req, res) {
 
       const base64 = file.buffer.toString("base64");
 
-      // Gemini
       geminiParts = [
         { inlineData: { mimeType: file.mimetype, data: base64 } },
         { text: PROMPT },
       ];
 
-      // OpenRouter
       orMessages = [{
         role: "user",
         content: [
@@ -203,6 +205,7 @@ export default async function handler(req, res) {
           { type: "text", text: PROMPT },
         ],
       }];
+      orModels = OR_VISION_MODELS;
     } else if (contentType.includes("application/json")) {
       const rawBody = await readRawBody(req);
       const { texto } = JSON.parse(rawBody.toString());
@@ -210,6 +213,7 @@ export default async function handler(req, res) {
 
       geminiParts = [{ text: `${PROMPT}\n\nConteúdo da NF:\n${texto}` }];
       orMessages = [{ role: "user", content: [{ type: "text", text: `${PROMPT}\n\nConteúdo da NF:\n${texto}` }] }];
+      orModels = [...OR_VISION_MODELS, ...OR_TEXT_MODELS];
     } else {
       return res.status(400).json({ erro: "Content-Type não suportado." });
     }
@@ -226,7 +230,7 @@ export default async function handler(req, res) {
 
     // 2) Fallback: OpenRouter
     if (orKey) {
-      const resultado = await callOpenRouter(orMessages, orKey);
+      const resultado = await callOpenRouter(orMessages, orKey, orModels);
       return res.status(200).json(resultado);
     }
 
