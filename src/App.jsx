@@ -493,6 +493,19 @@ export default function App() {
             parsed.telefone_transp = num;
           }
         }
+        // Descarta data/horário genéricos que a IA inventa
+        if (parsed.data_retirada) {
+          const d = String(parsed.data_retirada).trim();
+          if (/^(01\/01\/\d{4}|DD\/MM\/AAAA|00\/00\/0000|data\s*da\s*retirada)/i.test(d)) {
+            parsed.data_retirada = null;
+          }
+        }
+        if (parsed.horario_retirada) {
+          const h = String(parsed.horario_retirada).trim();
+          if (/^(00:00|HH:MM|horário\s*da\s*retirada)/i.test(h)) {
+            parsed.horario_retirada = null;
+          }
+        }
         return parsed;
       } catch (e) {
         if (i === MAX_RETRIES - 1) throw e;
