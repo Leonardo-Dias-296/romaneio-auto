@@ -211,7 +211,6 @@ export default async function handler(req, res) {
     let groqMessages;
     let orMessages;
     let orModels;
-    let isImage = false;
 
     if (contentType.includes("multipart/form-data")) {
       const boundary = parseBoundary(contentType);
@@ -222,7 +221,6 @@ export default async function handler(req, res) {
       if (!file) return res.status(400).json({ erro: "Campo 'arquivo' não encontrado no form." });
 
       const base64 = file.buffer.toString("base64");
-      isImage = true;
 
       // Groq (OpenAI format com image)
       groqMessages = [{
@@ -263,45 +261,25 @@ export default async function handler(req, res) {
       return res.status(400).json({ erro: "Content-Type não suportado." });
     }
 
-    if (isImage) {
-      // IMAGEM: Gemini → Groq → OpenRouter
-      if (geminiKey) {
-        try {
-          const resultado = await callGemini(geminiParts, geminiKey);
-          return res.status(200).json(resultado);
-        } catch (err) {
-          console.warn("[extrair] Gemini falhou:", err.message);
-        }
-      }
-      if (groqKey) {
-        try {
-          const resultado = await callGroq(groqMessages, groqKey);
-          return res.status(200).json(resultado);
-        } catch (err) {
-          console.warn("[extrair] Groq falhou:", err.message);
-        }
-      }
-    } else {
-      // TEXTO: Groq → Gemini → OpenRouter
-      if (groqKey) {
-        try {
-          const resultado = await callGroq(groqMessages, groqKey);
-          return res.status(200).json(resultado);
-        } catch (err) {
-          console.warn("[extrair] Groq falhou:", err.message);
-        }
-      }
-      if (geminiKey) {
-        try {
-          const resultado = await callGemini(geminiParts, geminiKey);
-          return res.status(200).json(resultado);
-        } catch (err) {
-          console.warn("[extrair] Gemini falhou:", err.message);
-        }
+    // Groq → Gemini → OpenRouter (para imagem e texto)
+    if (groqKey) {
+      try {
+        const resultado = await callGroq(groqMessages, groqKey);
+        return res.status(200).json(resultado);
+      } catch (err) {
+        console.warn("[extrair] Groq falhou:", err.message);
       }
     }
 
-    // OpenRouter (último recurso)
+    if (geminiKey) {
+      try {
+        const resultado = await callGemini(geminiParts, geminiKey);
+        return res.status(200).json(resultado);
+      } catch (err) {
+        console.warn("[extrair] Gemini falhou:", err.message);
+      }
+    }
+
     if (orKey) {
       try {
         const resultado = await callOpenRouter(orMessages, orKey, orModels);
