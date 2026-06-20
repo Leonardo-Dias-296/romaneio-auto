@@ -497,22 +497,16 @@ export default function App() {
       const allNotas = [];
       let shared = {};
 
+      const campoPrefixo = ["transportadora", "cnpj_transp", "endereco_transp", "telefone_transp", "nome_motorista", "cpf_motorista", "placa_veiculo", "data_retirada", "horario_retirada"];
+
       for (let i = 0; i < files.length; i++) {
         setStatusMsg(`Processando arquivo ${i + 1}/${files.length}...`);
         const parsed = await enviarUmArquivo(files[i], i, files.length);
-        // Fields shared across the romaneio (from first file)
-        if (i === 0) {
-          shared = {
-            transportadora: parsed.transportadora,
-            cnpj_transp: parsed.cnpj_transp,
-            endereco_transp: parsed.endereco_transp,
-            telefone_transp: parsed.telefone_transp,
-            nome_motorista: parsed.nome_motorista,
-            cpf_motorista: parsed.cpf_motorista,
-            placa_veiculo: parsed.placa_veiculo,
-            data_retirada: parsed.data_retirada,
-            horario_retirada: parsed.horario_retirada,
-          };
+        // Tenta preencher shared de QUALQUER arquivo (primeiro valor não nulo)
+        for (const chave of campoPrefixo) {
+          if (!shared[chave] && parsed[chave]) {
+            shared[chave] = parsed[chave];
+          }
         }
         allNotas.push({
           numero_nf: parsed.numero_nf,
@@ -655,8 +649,7 @@ export default function App() {
                     <span style={{ fontSize: 14, fontWeight: 700, color: "#0F172A" }}>Dados Extraídos</span>
                     <span style={{ background: "#F0FDF4", color: "#16A34A", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 20, border: "1px solid #BBF7D0" }}>Extraído</span>
                   </div>
-                  <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 12, maxHeight: 600, overflowY: "auto" }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1 }}>Transportadora</div>
+                    <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 12, maxHeight: 600, overflowY: "auto" }}>
                     <Field label="Transportadora" value={dados.transportadora} onChange={v => upd("transportadora", v)} />
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                       <Field label="CNPJ" value={dados.cnpj_transp} onChange={v => upd("cnpj_transp", v)} />
