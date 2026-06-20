@@ -128,31 +128,31 @@ function PreviewModal({ imgDataUrl, pdfBlob, filename, onClose }) {
 // ── Romaneio Document ──────────────────────────────────────────
 function RomaneioDoc({ dados, forCapture }) {
   const style = forCapture
-    ? { width: "100%", background: "#fff", fontFamily: "Arial, sans-serif", padding: "28px 32px" }
+    ? { width: "100%", maxWidth: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: "20px 24px", boxSizing: "border-box", overflow: "hidden" }
     : { background: "#fff", border: "1px solid #CBD5E1", borderRadius: 10, overflow: "hidden" };
 
-  const thStyle = { background: "#0F172A", color: "#fff", fontWeight: 700, fontSize: 11, padding: "6px 12px", textTransform: "uppercase", letterSpacing: "1.5px", textAlign: "left" };
-  const labelStyle = { width: "36%", padding: "7px 12px", fontWeight: 700, fontSize: 13, color: "#0F172A", background: "#F8FAFC", borderRight: "1px solid #CBD5E1", borderBottom: "1px solid #E2E8F0", whiteSpace: "nowrap" };
-  const valueStyle = { padding: "7px 12px", fontSize: 13, color: "#0F172A", borderBottom: "1px solid #E2E8F0", fontWeight: 400 };
+  const thStyle = { background: "#0F172A", color: "#fff", fontWeight: 700, fontSize: 10, padding: "5px 10px", textTransform: "uppercase", letterSpacing: "1.5px", textAlign: "left" };
+  const labelStyle = { width: "34%", padding: "5px 10px", fontWeight: 700, fontSize: 11, color: "#0F172A", background: "#F8FAFC", borderRight: "1px solid #CBD5E1", borderBottom: "1px solid #E2E8F0", whiteSpace: "nowrap" };
+  const valueStyle = { padding: "5px 10px", fontSize: 11, color: "#0F172A", borderBottom: "1px solid #E2E8F0", fontWeight: 400, wordBreak: "break-word" };
 
   const Section = ({ title }) => <tr><td colSpan={2} style={thStyle}>{title}</td></tr>;
   const Row = ({ label, value }) => <tr><td style={labelStyle}>{label}</td><td style={valueStyle}>{value || "\u00A0"}</td></tr>;
 
   return (
     <div style={style}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, paddingBottom: 14, borderBottom: "2px solid #0F172A" }}>
-        <div>
-          <div style={{ fontSize: forCapture ? 18 : 17, fontWeight: 900, color: "#0F172A" }}>SOLLARSUL ENERGIA SOLAR LTDA</div>
-          <div style={{ fontSize: 12, color: "#475569", marginTop: 3 }}>CNPJ: {REMETENTE.cnpj}</div>
-          <div style={{ fontSize: 12, color: "#475569", marginTop: 1 }}>{REMETENTE.endereco}</div>
-          <div style={{ fontSize: 12, color: "#475569", marginTop: 1 }}>Tel: {REMETENTE.telefone}</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, paddingBottom: 10, borderBottom: "2px solid #0F172A", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: forCapture ? 14 : 17, fontWeight: 900, color: "#0F172A" }}>SOLLARSUL ENERGIA SOLAR LTDA</div>
+          <div style={{ fontSize: forCapture ? 10 : 12, color: "#475569", marginTop: 2 }}>CNPJ: {REMETENTE.cnpj}</div>
+          <div style={{ fontSize: forCapture ? 10 : 12, color: "#475569", marginTop: 1 }}>{REMETENTE.endereco}</div>
+          <div style={{ fontSize: forCapture ? 10 : 12, color: "#475569", marginTop: 1 }}>Tel: {REMETENTE.telefone}</div>
         </div>
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: forCapture ? 15 : 14, fontWeight: 900, color: "#0F172A", textTransform: "uppercase" }}>Romaneio de Carga</div>
-          <div style={{ fontSize: 12, color: "#475569", fontWeight: 600, marginTop: 2 }}>Comprovante de Retirada</div>
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <div style={{ fontSize: forCapture ? 13 : 14, fontWeight: 900, color: "#0F172A", textTransform: "uppercase" }}>Romaneio de Carga</div>
+          <div style={{ fontSize: forCapture ? 10 : 12, color: "#475569", fontWeight: 600, marginTop: 2 }}>Comprovante de Retirada</div>
           {dados.numero_nf && (
-            <div style={{ marginTop: 8, display: "inline-block", border: "1.5px solid #0F172A", borderRadius: 4, padding: "3px 10px" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#0F172A" }}>NF-e {dados.numero_nf}</span>
+            <div style={{ marginTop: 6, display: "inline-block", border: "1.5px solid #0F172A", borderRadius: 4, padding: "2px 8px" }}>
+              <span style={{ fontSize: forCapture ? 11 : 13, fontWeight: 700, color: "#0F172A" }}>NF-e {dados.numero_nf}</span>
             </div>
           )}
         </div>
