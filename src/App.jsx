@@ -128,7 +128,7 @@ function PreviewModal({ imgDataUrl, pdfBlob, filename, onClose }) {
 // ── Romaneio Document ──────────────────────────────────────────
 function RomaneioDoc({ dados, forCapture }) {
   const style = forCapture
-    ? { width: "100%", maxWidth: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: "20px 24px", boxSizing: "border-box", overflow: "hidden" }
+    ? { width: "100%", maxWidth: 794, minHeight: 1123, background: "#fff", fontFamily: "Arial, sans-serif", padding: "20px 24px", boxSizing: "border-box", overflow: "hidden", display: "flex", flexDirection: "column" }
     : { background: "#fff", border: "1px solid #CBD5E1", borderRadius: 10, overflow: "hidden" };
 
   const thStyle = { background: "#0F172A", color: "#fff", fontWeight: 700, fontSize: 10, padding: "5px 10px", textTransform: "uppercase", letterSpacing: "1.5px", textAlign: "left" };
@@ -157,7 +157,7 @@ function RomaneioDoc({ dados, forCapture }) {
           )}
         </div>
       </div>
-      <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1", flex: 1 }}>
         <tbody>
           <Section title="Dados da Transportadora" />
           <Row label="Transportadora:" value={dados.transportadora} />
@@ -179,10 +179,10 @@ function RomaneioDoc({ dados, forCapture }) {
           <Row label="Observações:" value={dados.observacoes} />
           <tr><td colSpan={2} style={thStyle}>Assinaturas</td></tr>
           <tr>
-            <td colSpan={2} style={{ padding: 0 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+            <td colSpan={2} style={{ padding: 0, height: "100%" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: forCapture ? 120 : 80 }}>
                 {["Assinatura do Motorista", "Assinatura do Responsável do CD"].map((label, i) => (
-                  <div key={i} style={{ padding: "14px 16px 60px", position: "relative", borderRight: i === 0 ? "1px solid #CBD5E1" : "none" }}>
+                  <div key={i} style={{ padding: forCapture ? "20px 16px 80px" : "14px 16px 60px", position: "relative", borderRight: i === 0 ? "1px solid #CBD5E1" : "none", display: "flex", alignItems: "flex-end" }}>
                     <span style={{ fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: .5 }}>{label}</span>
                     <div style={{ position: "absolute", bottom: 22, left: 16, right: 16, height: 1, background: "#94A3B8" }} />
                   </div>
