@@ -31,19 +31,32 @@ Responda APENAS com JSON válido, sem markdown, sem blocos de código, sem qualq
 Se um campo não existir no documento, use null.`;
 
 const OR_VISION_MODELS = [
+  "openrouter/free",
   "google/gemma-4-26b-a4b-it:free",
+  "google/gemma-4-31b-it:free",
   "nvidia/nemotron-nano-12b-v2-vl:free",
   "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-  "google/gemma-4-31b-it:free",
+  "nvidia/nemotron-3.5-content-safety:free",
   "nex-agi/nex-n2-pro:free",
   "xiaomi/mimo-v2.5",
 ];
 
 const OR_TEXT_MODELS = [
+  "openrouter/free",
   "openai/gpt-oss-20b:free",
   "openai/gpt-oss-120b:free",
-  "nousresearch/hermes-3-llama-3.1-405b:free",
   "meta-llama/llama-3.3-70b-instruct:free",
+  "nousresearch/hermes-3-llama-3.1-405b:free",
+  "qwen/qwen3-coder:free",
+  "qwen/qwen3-next-80b-a3b-instruct:free",
+  "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "nvidia/nemotron-3-super-120b-a12b:free",
+  "nvidia/nemotron-3-nano-30b-a3b:free",
+  "nvidia/nemotron-nano-9b-v2:free",
+  "cohere/north-mini-code:free",
+  "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
+  "meta-llama/llama-3.2-3b-instruct:free",
+  "liquid/lfm-2.5-1.2b-instruct:free",
 ];
 
 function readRawBody(req) {
