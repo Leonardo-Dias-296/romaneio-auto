@@ -211,6 +211,7 @@ export default async function handler(req, res) {
     let groqMessages;
     let orMessages;
     let orModels;
+    let fileMimetype = "";
 
     if (contentType.includes("multipart/form-data")) {
       const boundary = parseBoundary(contentType);
@@ -221,8 +222,8 @@ export default async function handler(req, res) {
       if (!file) return res.status(400).json({ erro: "Campo 'arquivo' não encontrado no form." });
 
       const base64 = file.buffer.toString("base64");
+      fileMimetype = file.mimetype;
 
-      // Groq (OpenAI format com image)
       groqMessages = [{
         role: "user",
         content: [
@@ -231,13 +232,11 @@ export default async function handler(req, res) {
         ],
       }];
 
-      // Gemini
       geminiParts = [
         { inlineData: { mimeType: file.mimetype, data: base64 } },
         { text: PROMPT },
       ];
 
-      // OpenRouter
       orMessages = [{
         role: "user",
         content: [
@@ -261,8 +260,26 @@ export default async function handler(req, res) {
       return res.status(400).json({ erro: "Content-Type não suportado." });
     }
 
-    // Groq → Gemini → OpenRouter (para imagem e texto)
     const errors = [];
+    const isPdf = fileMimetype === "application/pdf";
+
+    const providers = isPdf
+      ? [["Gemini", geminiKey, () => callGemini(geminiParts, geminiKey)],
+         ["OpenRouter", orKey, () => callOpenRouter(orMessages, orKey, orModels)]]
+      : [["Groq", groqKey, () => callGroq(groqMessages, groqKey)],
+         ["Gemini", geminiKey, () => callGemini(geminiParts, geminiKey)],
+         ["OpenRouter", orKey, () => callOpenRouter(orMessages, orKey, orModels)]];
+
+    for (const [name, key, fn] of providers) {
+      if (!key) continue;
+      try {
+        const resultado = await fn();
+        return res.status(200).json(resultado);
+      } catch (err) {
+        console.warn(`[extrair] ${name} falhou:`, err.message);
+        errors.push(`${name}: ${err.message}`);
+      }
+    }
     if (groqKey) {
       try {
         const resultado = await callGroq(groqMessages, groqKey);
