@@ -1,5 +1,5 @@
 // api/extrair.js — Vercel Serverless Function
-// A chave da API (OPENROUTER_API_KEY) fica só aqui, nunca vai pro browser.
+// GEMINI_API_KEY (principal) e OPENROUTER_API_KEY (fallback) ficam só aqui.
 
 export const config = {
   api: {
@@ -30,24 +30,17 @@ const PROMPT = `Você é um extrator de dados de notas fiscais brasileiras. Anal
 Responda APENAS com JSON válido, sem markdown, sem blocos de código, sem qualquer texto adicional.
 Se um campo não existir no documento, use null.`;
 
-const VISION_MODELS = [
+const OR_MODELS = [
   "google/gemma-4-26b-a4b-it:free",
   "nvidia/nemotron-nano-12b-v2-vl:free",
   "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   "google/gemma-4-31b-it:free",
   "nex-agi/nex-n2-pro:free",
   "nvidia/nemotron-3.5-content-safety:free",
-];
-
-const TEXT_MODELS = [
   "openai/gpt-oss-20b:free",
   "openai/gpt-oss-120b:free",
   "nousresearch/hermes-3-llama-3.1-405b:free",
   "meta-llama/llama-3.3-70b-instruct:free",
-  "qwen/qwen3-coder:free",
-  "cohere/north-mini-code:free",
-  "nvidia/nemotron-3-ultra-550b-a55b:free",
-  "nvidia/nemotron-3-super-120b-a12b:free",
 ];
 
 function readRawBody(req) {
@@ -96,10 +89,37 @@ function parseMultipart(buffer, boundary) {
   return null;
 }
 
-async function callOpenRouter(messages, apiKey, models) {
+// ── Gemini API (principal) ─────────────────────────────────────
+async function callGemini(parts, apiKey) {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts }],
+        generationConfig: { temperature: 0, maxOutputTokens: 1024 },
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Gemini ${res.status}: ${txt}`);
+  }
+
+  const data = await res.json();
+  const texto = (data.candidates?.[0]?.content?.parts?.[0]?.text || "")
+    .replace(/```json|```/g, "")
+    .trim();
+  return JSON.parse(texto);
+}
+
+// ── OpenRouter (fallback) ─────────────────────────────────────
+async function callOpenRouter(messages, apiKey) {
   let lastError;
 
-  for (const model of models) {
+  for (const model of OR_MODELS) {
     try {
       const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
@@ -118,12 +138,12 @@ async function callOpenRouter(messages, apiKey, models) {
       });
 
       if (res.status === 429) {
-        lastError = new Error(`Rate limit no modelo ${model}`);
+        lastError = new Error(`Rate limit ${model}`);
         continue;
       }
       if (!res.ok) {
         const txt = await res.text();
-        lastError = new Error(`Erro ${model} ${res.status}: ${txt}`);
+        lastError = new Error(`${model} ${res.status}: ${txt}`);
         continue;
       }
 
@@ -131,16 +151,16 @@ async function callOpenRouter(messages, apiKey, models) {
       const texto = (data.choices?.[0]?.message?.content || "")
         .replace(/```json|```/g, "")
         .trim();
-
       return JSON.parse(texto);
     } catch (err) {
       lastError = err;
       continue;
     }
   }
-  throw lastError || new Error("Todos os modelos falharam");
+  throw lastError || new Error("OpenRouter: todos os modelos falharam");
 }
 
+// ── Handler ────────────────────────────────────────────────────
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -148,13 +168,16 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ erro: "Método não permitido" });
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return res.status(500).json({ erro: "OPENROUTER_API_KEY não configurada." });
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const orKey = process.env.OPENROUTER_API_KEY;
+  if (!geminiKey && !orKey) {
+    return res.status(500).json({ erro: "Nenhuma API key configurada." });
+  }
 
   try {
     const contentType = req.headers["content-type"] || "";
-    let userContent;
-    let models;
+    let geminiParts;
+    let orMessages;
 
     if (contentType.includes("multipart/form-data")) {
       const boundary = parseBoundary(contentType);
@@ -166,27 +189,48 @@ export default async function handler(req, res) {
 
       const base64 = file.buffer.toString("base64");
 
-      userContent = [
-        {
-          type: "image_url",
-          image_url: { url: `data:${file.mimetype};base64,${base64}` },
-        },
-        { type: "text", text: PROMPT },
+      // Gemini
+      geminiParts = [
+        { inlineData: { mimeType: file.mimetype, data: base64 } },
+        { text: PROMPT },
       ];
-      models = VISION_MODELS;
+
+      // OpenRouter
+      orMessages = [{
+        role: "user",
+        content: [
+          { type: "image_url", image_url: { url: `data:${file.mimetype};base64,${base64}` } },
+          { type: "text", text: PROMPT },
+        ],
+      }];
     } else if (contentType.includes("application/json")) {
       const rawBody = await readRawBody(req);
       const { texto } = JSON.parse(rawBody.toString());
       if (!texto) return res.status(400).json({ erro: "Campo 'texto' ausente." });
-      userContent = [{ type: "text", text: `${PROMPT}\n\nConteúdo da NF:\n${texto}` }];
-      models = [...VISION_MODELS, ...TEXT_MODELS];
+
+      geminiParts = [{ text: `${PROMPT}\n\nConteúdo da NF:\n${texto}` }];
+      orMessages = [{ role: "user", content: [{ type: "text", text: `${PROMPT}\n\nConteúdo da NF:\n${texto}` }] }];
     } else {
       return res.status(400).json({ erro: "Content-Type não suportado." });
     }
 
-    const messages = [{ role: "user", content: userContent }];
-    const resultado = await callOpenRouter(messages, apiKey, models);
-    return res.status(200).json(resultado);
+    // 1) Tenta Gemini primeiro
+    if (geminiKey) {
+      try {
+        const resultado = await callGemini(geminiParts, geminiKey);
+        return res.status(200).json(resultado);
+      } catch (err) {
+        console.warn("[extrair] Gemini falhou, tentando OpenRouter:", err.message);
+      }
+    }
+
+    // 2) Fallback: OpenRouter
+    if (orKey) {
+      const resultado = await callOpenRouter(orMessages, orKey);
+      return res.status(200).json(resultado);
+    }
+
+    return res.status(500).json({ erro: "Todas as APIs falharam." });
   } catch (err) {
     console.error("[extrair]", err.message);
     return res.status(500).json({ erro: err.message });
