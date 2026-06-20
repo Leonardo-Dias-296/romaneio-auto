@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from "react";
 const API_URL = "/api/extrair";
 
 const MAX_RETRIES = 3;
+const FIELDS_PER_NF = ["numero_nf", "produtos", "quantidade_volumes", "numero_pedido", "observacoes"];
 
 const REMETENTE = {
   razao_social: "SOLLARSUL ENERGIA SOLAR LTDA",
@@ -127,6 +128,9 @@ function PreviewModal({ imgDataUrl, pdfBlob, filename, onClose }) {
 
 // ── Romaneio Document ──────────────────────────────────────────
 function RomaneioDoc({ dados, forCapture }) {
+  const notas = dados.notas || [];
+  const isMulti = notas.length > 1;
+
   const style = forCapture
     ? { width: "100%", maxWidth: 794, minHeight: 1123, background: "#fff", fontFamily: "Arial, sans-serif", padding: "20px 24px", boxSizing: "border-box", overflow: "hidden", display: "flex", flexDirection: "column" }
     : { background: "#fff", border: "1px solid #CBD5E1", borderRadius: 10, overflow: "hidden" };
@@ -137,6 +141,9 @@ function RomaneioDoc({ dados, forCapture }) {
 
   const Section = ({ title }) => <tr><td colSpan={2} style={thStyle}>{title}</td></tr>;
   const Row = ({ label, value }) => <tr><td style={labelStyle}>{label}</td><td style={valueStyle}>{value || "\u00A0"}</td></tr>;
+
+  const totalVolumes = notas.reduce((s, n) => s + (parseInt(n.quantidade_volumes) || 1), 0);
+  const nfHeader = isMulti ? `${notas.length} Notas Fiscais` : (notas[0]?.numero_nf ? `NF-e ${notas[0].numero_nf}` : "Romaneio de Carga");
 
   return (
     <div style={style}>
@@ -153,11 +160,9 @@ function RomaneioDoc({ dados, forCapture }) {
         <div style={{ textAlign: "right", flexShrink: 0 }}>
           <div style={{ fontSize: forCapture ? 13 : 14, fontWeight: 900, color: "#0F172A", textTransform: "uppercase" }}>Romaneio de Carga</div>
           <div style={{ fontSize: forCapture ? 10 : 12, color: "#475569", fontWeight: 600, marginTop: 2 }}>Comprovante de Retirada</div>
-          {dados.numero_nf && (
-            <div style={{ marginTop: 6, display: "inline-block", border: "1.5px solid #0F172A", borderRadius: 4, padding: "2px 8px" }}>
-              <span style={{ fontSize: forCapture ? 11 : 13, fontWeight: 700, color: "#0F172A" }}>NF-e {dados.numero_nf}</span>
-            </div>
-          )}
+          <div style={{ marginTop: 6, display: "inline-block", border: "1.5px solid #0F172A", borderRadius: 4, padding: "2px 8px" }}>
+            <span style={{ fontSize: forCapture ? 11 : 13, fontWeight: 700, color: "#0F172A" }}>{nfHeader}</span>
+          </div>
         </div>
       </div>
       <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1", flex: 1 }}>
@@ -174,12 +179,46 @@ function RomaneioDoc({ dados, forCapture }) {
           <Section title="Informações da Retirada" />
           <Row label="Data:" value={dados.data_retirada} />
           <Row label="Horário:" value={dados.horario_retirada} />
-          <Row label="N. da NF:" value={dados.numero_nf} />
-          <Row label="Pedido:" value={dados.numero_pedido} />
-          <Section title="Descrição da Mercadoria" />
-          <Row label="Produto(s):" value={dados.produtos} />
-          <Row label="Quantidade de Volumes:" value={dados.quantidade_volumes} />
-          <Row label="Observações:" value={dados.observacoes} />
+          {isMulti ? (
+            <>
+              <Section title={`Notas Fiscais (${notas.length}) — Total de Volumes: ${totalVolumes}`} />
+              <tr><td colSpan={2} style={{ padding: 0 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      <th style={{ ...thStyle, width: "6%" }}>#</th>
+                      <th style={{ ...thStyle, width: "18%" }}>NF-e</th>
+                      <th style={{ ...thStyle, width: "36%" }}>Produto(s)</th>
+                      <th style={{ ...thStyle, width: "14%" }}>Volumes</th>
+                      <th style={{ ...thStyle, width: "14%" }}>Pedido</th>
+                      <th style={{ ...thStyle, width: "12%" }}>Obs</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {notas.map((n, i) => (
+                      <tr key={i}>
+                        <td style={{ ...valueStyle, textAlign: "center", fontWeight: 700 }}>{i + 1}</td>
+                        <td style={{ ...valueStyle, fontWeight: 700 }}>{n.numero_nf || "—"}</td>
+                        <td style={{ ...valueStyle, lineHeight: 1.3 }}>{n.produtos || "—"}</td>
+                        <td style={{ ...valueStyle, textAlign: "center" }}>{n.quantidade_volumes || "1"}</td>
+                        <td style={{ ...valueStyle }}>{n.numero_pedido || "—"}</td>
+                        <td style={{ ...valueStyle, fontSize: 10 }}>{n.observacoes || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </td></tr>
+            </>
+          ) : (
+            <>
+              <Row label="N. da NF:" value={notas[0]?.numero_nf} />
+              <Row label="Pedido:" value={notas[0]?.numero_pedido} />
+              <Section title="Descrição da Mercadoria" />
+              <Row label="Produto(s):" value={notas[0]?.produtos} />
+              <Row label="Quantidade de Volumes:" value={notas[0]?.quantidade_volumes} />
+              <Row label="Observações:" value={notas[0]?.observacoes} />
+            </>
+          )}
           <tr><td colSpan={2} style={thStyle}>Assinaturas</td></tr>
           <tr>
             <td colSpan={2} style={{ padding: 0, height: "100%" }}>
@@ -204,7 +243,7 @@ function RomaneioDoc({ dados, forCapture }) {
 }
 
 // ── Etiqueta ───────────────────────────────────────────────────
-function Etiqueta({ dados, index, total, forCapture }) {
+function Etiqueta({ nota, dados, volumeIndex, totalVolumes, forCapture }) {
   const size = forCapture
     ? { width: 340, height: 220, fontFamily: "Arial, sans-serif" }
     : { width: "100%", aspectRatio: "10/6.5", maxWidth: 340 };
@@ -218,7 +257,7 @@ function Etiqueta({ dados, index, total, forCapture }) {
         <div style={{ border: "2px solid #0F172A", borderRadius: 4, padding: "4px 10px", textAlign: "center" }}>
           <div style={{ fontSize: 7, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: 1 }}>VOLUME</div>
           <div style={{ fontWeight: 900, fontSize: 22, color: "#0F172A", lineHeight: 1 }}>
-            {index + 1}<span style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>/{total}</span>
+            {volumeIndex + 1}<span style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>/{totalVolumes}</span>
           </div>
         </div>
       </div>
@@ -226,7 +265,7 @@ function Etiqueta({ dados, index, total, forCapture }) {
         <div style={{ borderBottom: "1px solid #E2E8F0", paddingBottom: 5, display: "flex", justifyContent: "space-between" }}>
           <div>
             <div style={{ fontSize: 8, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1 }}>Nota Fiscal</div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: "#0F172A" }}>NF-e {dados.numero_nf || "—"}</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#0F172A" }}>NF-e {nota.numero_nf || "—"}</div>
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 8, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1 }}>Data</div>
@@ -239,12 +278,12 @@ function Etiqueta({ dados, index, total, forCapture }) {
         </div>
         <div>
           <div style={{ fontSize: 8, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, marginBottom: 1 }}>Produto(s)</div>
-          <div style={{ fontSize: 11, fontWeight: 500, color: "#0F172A", lineHeight: 1.3 }}>{dados.produtos || "Carga geral"}</div>
+          <div style={{ fontSize: 11, fontWeight: 500, color: "#0F172A", lineHeight: 1.3 }}>{nota.produtos || "Carga geral"}</div>
         </div>
-        {dados.numero_pedido && (
+        {nota.numero_pedido && (
           <div>
             <div style={{ fontSize: 8, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, marginBottom: 1 }}>Pedido</div>
-            <div style={{ fontSize: 11, fontWeight: 500, color: "#0F172A" }}>{dados.numero_pedido}</div>
+            <div style={{ fontSize: 11, fontWeight: 500, color: "#0F172A" }}>{nota.numero_pedido}</div>
           </div>
         )}
       </div>
@@ -257,12 +296,24 @@ function Etiqueta({ dados, index, total, forCapture }) {
 }
 
 function EtiquetasCapture({ dados }) {
-  const total = parseInt(dados.quantidade_volumes) || 1;
+  const notas = dados.notas || [];
+  // Build flat list: each entry is { nota, volumeInNota, globalIndex }
+  let globalIndex = 0;
+  const labels = [];
+  for (const nota of notas) {
+    const vols = parseInt(nota.quantidade_volumes) || 1;
+    for (let v = 0; v < vols; v++) {
+      labels.push({ nota, volumeInNota: v, globalIndex });
+      globalIndex++;
+    }
+  }
+  const totalVolumes = globalIndex;
+
   return (
     <div style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: 20 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        {Array.from({ length: total }, (_, i) => (
-          <Etiqueta key={i} dados={dados} index={i} total={total} forCapture />
+        {labels.map((l, i) => (
+          <Etiqueta key={i} nota={l.nota} dados={dados} volumeIndex={l.globalIndex} totalVolumes={totalVolumes} forCapture />
         ))}
       </div>
     </div>
@@ -294,8 +345,10 @@ export default function App() {
     return { widthMm: 210, heightMm: 297 };
   }
 
-  const nfSlug = dados.numero_nf ? dados.numero_nf.replace(/\D/g, "") : Date.now().toString().slice(-6);
-  const totalLabels = parseInt(dados.quantidade_volumes) || 1;
+  const nfSlug = (dados.notas && dados.notas.length === 1)
+    ? (dados.notas[0].numero_nf || "").replace(/\D/g, "") || Date.now().toString().slice(-6)
+    : (dados.notas && dados.notas.length > 1 ? "multi" + dados.notas.length : Date.now().toString().slice(-6));
+  const totalLabels = (dados.notas || []).reduce((sum, n) => sum + (parseInt(n.quantidade_volumes) || 1), 0);
 
   async function handlePreview(ref, filename) {
     setBusy(true);
@@ -379,76 +432,126 @@ export default function App() {
     });
   }
 
-  // ── Envia arquivo para /api/extrair (backend Vercel) ──────────
-  async function processarArquivo(file) {
-    setStep(2); setTentativas(0); setStatusMsg("Enviando para o servidor...");
-    try {
-      const isText = file.type === "text/plain" || file.name.endsWith(".txt") || file.name.endsWith(".xml");
+  // ── Envia 1 arquivo para /api/extrair, retorna dados parseados ─
+  async function enviarUmArquivo(file, idx, total) {
+    const isText = file.type === "text/plain" || file.name.endsWith(".txt") || file.name.endsWith(".xml");
 
-      let fetchOpts;
-      if (isText) {
-        const texto = await file.text();
-        fetchOpts = {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ texto }),
-        };
+    let fetchOpts;
+    if (isText) {
+      const texto = await file.text();
+      fetchOpts = {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texto }),
+      };
+    } else {
+      let sendFile = file;
+      if (file.type === "application/pdf") {
+        setStatusMsg(`Convertendo PDF ${idx + 1}/${total} para imagem...`);
+        sendFile = await pdfToImage(file);
       } else {
-        let sendFile = file;
-        if (file.type === "application/pdf") {
-          setStatusMsg("Convertendo PDF para imagem...");
-          sendFile = await pdfToImage(file);
-        } else {
-          sendFile = await compressImage(file);
-        }
-        const form = new FormData();
-        form.append("arquivo", sendFile);
-        fetchOpts = { method: "POST", body: form };
+        sendFile = await compressImage(file);
       }
+      const form = new FormData();
+      form.append("arquivo", sendFile);
+      fetchOpts = { method: "POST", body: form };
+    }
 
-      for (let i = 0; i < MAX_RETRIES; i++) {
-        setTentativas(i + 1);
-        if (i > 0) {
-          const wait = i < 3 ? 2000 : i < 6 ? 5000 : 10000;
-          setStatusMsg(`Tentativa ${i + 1}/${MAX_RETRIES} — aguardando ${wait / 1000}s...`);
-          await new Promise(r => setTimeout(r, wait));
+    for (let i = 0; i < MAX_RETRIES; i++) {
+      setTentativas(i + 1);
+      if (i > 0) {
+        const wait = i < 3 ? 2000 : 5000;
+        setStatusMsg(`Arquivo ${idx + 1}/${total} — Tentativa ${i + 1}/${MAX_RETRIES}, aguardando ${wait / 1000}s...`);
+        await new Promise(r => setTimeout(r, wait));
+      }
+      setStatusMsg(`Processando arquivo ${idx + 1}/${total}... (tentativa ${i + 1}/${MAX_RETRIES})`);
+
+      try {
+        const res = await fetch(API_URL, fetchOpts);
+        if ((res.status === 503 || res.status === 500) && i < MAX_RETRIES - 1) continue;
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ erro: res.statusText }));
+          throw new Error(err.erro || `Erro HTTP ${res.status}`);
         }
-        setStatusMsg(`Processando... (tentativa ${i + 1}/${MAX_RETRIES})`);
-
+        const parsed = await res.json();
+        // Junta cidade/uf ao endereço da transportadora
         try {
-          const res = await fetch(API_URL, fetchOpts);
-          if ((res.status === 503 || res.status === 500) && i < MAX_RETRIES - 1) continue;
-          if (!res.ok) {
-            const err = await res.json().catch(() => ({ erro: res.statusText }));
-            throw new Error(err.erro || `Erro HTTP ${res.status}`);
-          }
-          const parsed = await res.json();
-          // Junta cidade/uf ao endereço da transportadora
-          try {
-            const cidade = parsed.cidade_transp && String(parsed.cidade_transp).trim();
-            const uf = parsed.uf_transp && String(parsed.uf_transp).trim();
-            let endereco = parsed.endereco_transp && String(parsed.endereco_transp).trim();
-            if ((cidade || uf) && endereco) {
-              const cidadeUf = [cidade, uf].filter(Boolean).join("/");
-              if (!endereco.includes(cidade) && !endereco.includes(uf)) {
-                endereco = `${endereco} - ${cidadeUf}`;
-              }
-              parsed.endereco_transp = endereco;
+          const cidade = parsed.cidade_transp && String(parsed.cidade_transp).trim();
+          const uf = parsed.uf_transp && String(parsed.uf_transp).trim();
+          let endereco = parsed.endereco_transp && String(parsed.endereco_transp).trim();
+          if ((cidade || uf) && endereco) {
+            const cidadeUf = [cidade, uf].filter(Boolean).join("/");
+            if (!endereco.includes(cidade) && !endereco.includes(uf)) {
+              endereco = `${endereco} - ${cidadeUf}`;
             }
-          } catch (e) {
-            // ignore and use raw parsed
+            parsed.endereco_transp = endereco;
           }
-          setDados(parsed);
-          setStep(3);
-          return;
-        } catch (e) {
-          if (i === MAX_RETRIES - 1) throw e;
-        }
+        } catch (e) { /* ignore */ }
+        return parsed;
+      } catch (e) {
+        if (i === MAX_RETRIES - 1) throw e;
       }
+    }
+  }
+
+  // ── Processa 1 ou mais arquivos ─────────────────────────────
+  async function processarArquivos(files) {
+    setStep(2); setTentativas(0);
+    try {
+      const allNotas = [];
+      let shared = {};
+
+      for (let i = 0; i < files.length; i++) {
+        setStatusMsg(`Processando arquivo ${i + 1}/${files.length}...`);
+        const parsed = await enviarUmArquivo(files[i], i, files.length);
+        // Fields shared across the romaneio (from first file)
+        if (i === 0) {
+          shared = {
+            transportadora: parsed.transportadora,
+            cnpj_transp: parsed.cnpj_transp,
+            endereco_transp: parsed.endereco_transp,
+            telefone_transp: parsed.telefone_transp,
+            nome_motorista: parsed.nome_motorista,
+            cpf_motorista: parsed.cpf_motorista,
+            placa_veiculo: parsed.placa_veiculo,
+            data_retirada: parsed.data_retirada,
+            horario_retirada: parsed.horario_retirada,
+          };
+        }
+        allNotas.push({
+          numero_nf: parsed.numero_nf,
+          produtos: parsed.produtos,
+          quantidade_volumes: parsed.quantidade_volumes,
+          numero_pedido: parsed.numero_pedido,
+          observacoes: parsed.observacoes,
+        });
+      }
+
+      setDados({ ...shared, notas: allNotas });
+      setStep(3);
     } catch (err) { alert("Erro:\n" + err.message); setStep(1); }
   }
 
   function upd(key, val) { setDados(prev => ({ ...prev, [key]: val })); }
+  function updNota(idx, key, val) {
+    setDados(prev => {
+      const notas = [...(prev.notas || [])];
+      notas[idx] = { ...notas[idx], [key]: val };
+      return { ...prev, notas };
+    });
+  }
+  function addNota() {
+    setDados(prev => ({
+      ...prev,
+      notas: [...(prev.notas || []), { numero_nf: "", produtos: "", quantidade_volumes: "", numero_pedido: "", observacoes: "" }],
+    }));
+  }
+  function removeNota(idx) {
+    setDados(prev => ({
+      ...prev,
+      notas: prev.notas.filter((_, i) => i !== idx),
+    }));
+  }
   const wizardSteps = ["Enviar NF", "Processando", "Resultado"];
 
   return (
@@ -504,13 +607,13 @@ export default function App() {
               onMouseEnter={e => e.currentTarget.style.borderColor = "#64748B"}
               onMouseLeave={e => e.currentTarget.style.borderColor = "#CBD5E1"}>
               <div style={{ fontSize: 48, marginBottom: 16 }}>📄</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: "#0F172A", marginBottom: 8 }}>Envie a Nota Fiscal</div>
-              <p style={{ fontSize: 14, color: "#64748B", marginBottom: 24 }}>O sistema extrai os dados e preenche o romaneio automaticamente</p>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "#0F172A", marginBottom: 8 }}>Envie as Notas Fiscais</div>
+              <p style={{ fontSize: 14, color: "#64748B", marginBottom: 24 }}>Selecione 1 ou mais arquivos — o sistema gera um romaneio único com todas as NFs</p>
               <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 24, flexWrap: "wrap" }}>
                 {["PDF", "PNG", "JPG", "TXT", "XML"].map(f => <span key={f} style={{ background: "#F1F5F9", color: "#475569", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 5, border: "1px solid #E2E8F0" }}>{f}</span>)}
               </div>
               <div style={{ background: "#0F172A", color: "#fff", display: "inline-block", padding: "12px 28px", borderRadius: 8, fontSize: 14, fontWeight: 700 }}>Selecionar Arquivo</div>
-              <input ref={fileRef} type="file" accept=".pdf,.png,.jpg,.jpeg,.txt,.xml" style={{ display: "none" }} onChange={e => e.target.files[0] && processarArquivo(e.target.files[0])} />
+              <input ref={fileRef} type="file" accept=".pdf,.png,.jpg,.jpeg,.txt,.xml" multiple style={{ display: "none" }} onChange={e => { const f = Array.from(e.target.files || []); if (f.length) processarArquivos(f); }} />
             </div>
             <div style={{ marginTop: 20, background: "#fff", border: "1px solid #E2E8F0", borderRadius: 10, padding: 18 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Remetente pré-configurado</div>
@@ -556,7 +659,7 @@ export default function App() {
                     <span style={{ fontSize: 14, fontWeight: 700, color: "#0F172A" }}>Dados Extraídos</span>
                     <span style={{ background: "#F0FDF4", color: "#16A34A", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 20, border: "1px solid #BBF7D0" }}>Extraído</span>
                   </div>
-                  <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 12, maxHeight: 600, overflowY: "auto" }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1 }}>Transportadora</div>
                     <Field label="Transportadora" value={dados.transportadora} onChange={v => upd("transportadora", v)} />
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -574,15 +677,34 @@ export default function App() {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                       <Field label="Data" value={dados.data_retirada} onChange={v => upd("data_retirada", v)} />
                       <Field label="Horário" value={dados.horario_retirada} onChange={v => upd("horario_retirada", v)} />
-                      <Field label="N. da NF" value={dados.numero_nf} onChange={v => upd("numero_nf", v)} />
-                      <Field label="Pedido" value={dados.numero_pedido} onChange={v => upd("numero_pedido", v)} />
                     </div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, paddingTop: 4 }}>Mercadoria</div>
-                    <Field label="Produto(s)" value={dados.produtos} onChange={v => upd("produtos", v)} />
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                      <Field label="Qtd de Volumes" value={dados.quantidade_volumes} onChange={v => upd("quantidade_volumes", v)} />
-                      <Field label="Observações" value={dados.observacoes} onChange={v => upd("observacoes", v)} />
+
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, paddingTop: 8, borderTop: "1px solid #E2E8F0" }}>
+                      Notas Fiscais ({(dados.notas || []).length})
                     </div>
+                    {(dados.notas || []).map((nota, idx) => (
+                      <div key={idx} style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, padding: 14, display: "flex", flexDirection: "column", gap: 10, position: "relative" }}>
+                        {(dados.notas || []).length > 1 && (
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "#0F172A" }}>NF #{idx + 1}</span>
+                            <button onClick={() => removeNota(idx)} style={{ background: "none", border: "none", color: "#EF4444", cursor: "pointer", fontSize: 18, fontWeight: 700, padding: 0, lineHeight: 1 }}>×</button>
+                          </div>
+                        )}
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                          <Field label="N. da NF" value={nota.numero_nf} onChange={v => updNota(idx, "numero_nf", v)} />
+                          <Field label="Pedido" value={nota.numero_pedido} onChange={v => updNota(idx, "numero_pedido", v)} />
+                        </div>
+                        <Field label="Produto(s)" value={nota.produtos} onChange={v => updNota(idx, "produtos", v)} />
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                          <Field label="Qtd de Volumes" value={nota.quantidade_volumes} onChange={v => updNota(idx, "quantidade_volumes", v)} />
+                          <Field label="Observações" value={nota.observacoes} onChange={v => updNota(idx, "observacoes", v)} />
+                        </div>
+                      </div>
+                    ))}
+                    <button onClick={addNota}
+                      style={{ background: "#F1F5F9", border: "2px dashed #CBD5E1", borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 600, color: "#475569", cursor: "pointer", fontFamily: "inherit" }}>
+                      + Adicionar Nota Fiscal
+                    </button>
                   </div>
                 </div>
                 <RomaneioDoc dados={dados} />
@@ -607,7 +729,7 @@ export default function App() {
                     <Btn busy={busy} onClick={() => handlePreview(romaneioRef, `romaneio-${nfSlug}.pdf`)}>Visualizar / Imprimir</Btn>
                     <Btn busy={busy} color="#334155" onClick={() => handleDownload(romaneioRef, `romaneio-${nfSlug}.pdf`)}>Baixar PDF</Btn>
                   </div>
-                  <Btn color="#F1F5F9" textColor="#0F172A" onClick={() => { setStep(1); setDados({}); }}>Nova Nota Fiscal</Btn>
+                  <Btn color="#F1F5F9" textColor="#0F172A" onClick={() => { setStep(1); setDados({}); }}>Novo Romaneio</Btn>
                 </div>
               </div>
             )}
@@ -615,12 +737,21 @@ export default function App() {
             {tab === "etiquetas" && (
               <div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16, marginBottom: 20 }}>
-                  {Array.from({ length: totalLabels }, (_, i) => (
-                    <Etiqueta key={i} dados={dados} index={i} total={totalLabels} />
-                  ))}
+                  {(() => {
+                    const notas = dados.notas || [];
+                    let globalIdx = 0;
+                    const totalVols = notas.reduce((s, n) => s + (parseInt(n.quantidade_volumes) || 1), 0);
+                    return notas.flatMap((nota, notaIdx) => {
+                      const vols = parseInt(nota.quantidade_volumes) || 1;
+                      return Array.from({ length: vols }, (_, v) => {
+                        const i = globalIdx++;
+                        return <Etiqueta key={`${notaIdx}-${v}`} nota={nota} dados={dados} volumeIndex={i} totalVolumes={totalVols} />;
+                      });
+                    });
+                  })()}
                 </div>
                 <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 8, padding: "11px 16px", marginBottom: 18, fontSize: 13, color: "#475569" }}>
-                  {totalLabels} etiqueta{totalLabels !== 1 ? "s" : ""} — baseado na quantidade de volumes da NF. Ajuste em "Qtd de Volumes" na aba Romaneio.
+                  {totalLabels} etiqueta{totalLabels !== 1 ? "s" : ""} — {(dados.notas || []).length} NF{(dados.notas || []).length !== 1 ? "s" : ""}, volume{totalLabels !== 1 ? "s" : ""} numerados globalmente. Ajuste volumes na aba Romaneio.
                 </div>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                   <Btn busy={busy} onClick={() => handlePreview(etiquetasRef, `etiquetas-${nfSlug}.pdf`)}>Visualizar / Imprimir Etiquetas</Btn>
