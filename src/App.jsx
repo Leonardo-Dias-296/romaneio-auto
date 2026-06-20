@@ -141,7 +141,7 @@ function RomaneioDoc({ dados, forCapture }) {
   return (
     <div style={style}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, paddingBottom: 10, borderBottom: "2px solid #0F172A", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ minWidth: 0, flex: 1, display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <div style={{ minWidth: 0, flex: 1, display: "flex", gap: 12, alignItems: "center" }}>
           <img src="/image.png" alt="Logo" style={{ height: forCapture ? 100 : 110, objectFit: "contain", flexShrink: 0 }} />
           <div>
             <div style={{ fontSize: forCapture ? 14 : 17, fontWeight: 900, color: "#0F172A" }}>SOLLARSUL ENERGIA SOLAR LTDA</div>
