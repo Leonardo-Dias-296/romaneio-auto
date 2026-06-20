@@ -315,6 +315,34 @@ export default function App() {
     finally { setBusy(false); }
   }
 
+  // ── Comprime imagem antes de enviar ──────────────────────────
+  function compressImage(file) {
+    return new Promise((resolve) => {
+      if (file.type === "application/pdf" || !file.type.startsWith("image/")) {
+        resolve(file);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX = 1024;
+          let w = img.width, h = img.height;
+          if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          canvas.toBlob((blob) => {
+            resolve(new File([blob], file.name, { type: "image/jpeg" }));
+          }, "image/jpeg", 0.8);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   // ── Envia arquivo para /api/extrair (backend Vercel) ──────────
   async function processarArquivo(file) {
     setStep(2); setTentativas(0); setStatusMsg("Enviando para o servidor...");
@@ -331,7 +359,8 @@ export default function App() {
         };
       } else {
         const form = new FormData();
-        form.append("arquivo", file);
+        const compressed = await compressImage(file);
+        form.append("arquivo", compressed);
         fetchOpts = { method: "POST", body: form };
       }
 
