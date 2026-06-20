@@ -497,7 +497,7 @@ export default function App() {
       const allNotas = [];
       let shared = {};
 
-      const campoPrefixo = ["transportadora", "cnpj_transp", "endereco_transp", "telefone_transp", "nome_motorista", "cpf_motorista", "placa_veiculo", "data_retirada", "horario_retirada"];
+      const campoPrefixo = ["transportadora", "cnpj_transp", "endereco_transp", "cidade_transp", "uf_transp", "telefone_transp", "nome_motorista", "cpf_motorista", "placa_veiculo", "data_retirada", "horario_retirada"];
 
       for (let i = 0; i < files.length; i++) {
         setStatusMsg(`Processando arquivo ${i + 1}/${files.length}...`);
@@ -515,6 +515,26 @@ export default function App() {
           numero_pedido: parsed.numero_pedido,
           observacoes: parsed.observacoes,
         });
+      }
+
+      // Busca telefone na web se estiver vazio
+      if (!shared.telefone_transp && shared.transportadora) {
+        setStatusMsg("Buscando telefone da transportadora...");
+        try {
+          const telRes = await fetch("/api/buscar-telefone", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              transportadora: shared.transportadora,
+              cidade_transp: shared.cidade_transp || "",
+              uf_transp: shared.uf_transp || "",
+            }),
+          });
+          if (telRes.ok) {
+            const telData = await telRes.json();
+            if (telData.telefone) shared.telefone_transp = telData.telefone;
+          }
+        } catch {}
       }
 
       setDados({ ...shared, notas: allNotas });

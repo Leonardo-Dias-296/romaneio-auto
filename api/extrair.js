@@ -16,7 +16,7 @@ const PROMPT = `Você é um extrator de dados de notas fiscais brasileiras. Anal
   "endereco_transp": "endereço completo da transportadora (rua, número, bairro)",
   "cidade_transp": "cidade da transportadora",
   "uf_transp": "UF/estado da transportadora (sigla de 2 letras)",
-  "telefone_transp": "telefone da transportadora com DDD",
+  "telefone_transp": "telefone da transportadora com DDD (se não estiver visível, busque com base no nome e localização da empresa)",
   "nome_motorista": "nome completo do motorista",
   "cpf_motorista": "CPF ou RG do motorista",
   "placa_veiculo": "placa do veículo",
