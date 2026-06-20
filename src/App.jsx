@@ -243,7 +243,7 @@ function RomaneioDoc({ dados, forCapture }) {
 }
 
 // ── Etiqueta ───────────────────────────────────────────────────
-function Etiqueta({ nota, dados, volumeIndex, totalVolumes, forCapture }) {
+function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
   const size = forCapture
     ? { width: 340, height: 220, fontFamily: "Arial, sans-serif" }
     : { width: "100%", aspectRatio: "10/6.5", maxWidth: 340 };
@@ -257,7 +257,7 @@ function Etiqueta({ nota, dados, volumeIndex, totalVolumes, forCapture }) {
         <div style={{ border: "2px solid #0F172A", borderRadius: 4, padding: "4px 10px", textAlign: "center" }}>
           <div style={{ fontSize: 7, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: 1 }}>VOLUME</div>
           <div style={{ fontWeight: 900, fontSize: 22, color: "#0F172A", lineHeight: 1 }}>
-            {volumeIndex + 1}<span style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>/{totalVolumes}</span>
+            {volumeInNota + 1}<span style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>/{totalVolumesNota}</span>
           </div>
         </div>
       </div>
@@ -297,23 +297,19 @@ function Etiqueta({ nota, dados, volumeIndex, totalVolumes, forCapture }) {
 
 function EtiquetasCapture({ dados }) {
   const notas = dados.notas || [];
-  // Build flat list: each entry is { nota, volumeInNota, globalIndex }
-  let globalIndex = 0;
   const labels = [];
   for (const nota of notas) {
     const vols = parseInt(nota.quantidade_volumes) || 1;
     for (let v = 0; v < vols; v++) {
-      labels.push({ nota, volumeInNota: v, globalIndex });
-      globalIndex++;
+      labels.push({ nota, volumeInNota: v, totalVolumesNota: vols });
     }
   }
-  const totalVolumes = globalIndex;
 
   return (
     <div style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: 20 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         {labels.map((l, i) => (
-          <Etiqueta key={i} nota={l.nota} dados={dados} volumeIndex={l.globalIndex} totalVolumes={totalVolumes} forCapture />
+          <Etiqueta key={i} nota={l.nota} dados={dados} volumeInNota={l.volumeInNota} totalVolumesNota={l.totalVolumesNota} forCapture />
         ))}
       </div>
     </div>
@@ -739,19 +735,16 @@ export default function App() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16, marginBottom: 20 }}>
                   {(() => {
                     const notas = dados.notas || [];
-                    let globalIdx = 0;
-                    const totalVols = notas.reduce((s, n) => s + (parseInt(n.quantidade_volumes) || 1), 0);
                     return notas.flatMap((nota, notaIdx) => {
                       const vols = parseInt(nota.quantidade_volumes) || 1;
-                      return Array.from({ length: vols }, (_, v) => {
-                        const i = globalIdx++;
-                        return <Etiqueta key={`${notaIdx}-${v}`} nota={nota} dados={dados} volumeIndex={i} totalVolumes={totalVols} />;
-                      });
+                      return Array.from({ length: vols }, (_, v) => (
+                        <Etiqueta key={`${notaIdx}-${v}`} nota={nota} dados={dados} volumeInNota={v} totalVolumesNota={vols} />
+                      ));
                     });
                   })()}
                 </div>
                 <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 8, padding: "11px 16px", marginBottom: 18, fontSize: 13, color: "#475569" }}>
-                  {totalLabels} etiqueta{totalLabels !== 1 ? "s" : ""} — {(dados.notas || []).length} NF{(dados.notas || []).length !== 1 ? "s" : ""}, volume{totalLabels !== 1 ? "s" : ""} numerados globalmente. Ajuste volumes na aba Romaneio.
+                  {totalLabels} etiqueta{totalLabels !== 1 ? "s" : ""} — volumes numerados por NF (ex: NF1 1/3, NF2 1/1).
                 </div>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                   <Btn busy={busy} onClick={() => handlePreview(etiquetasRef, `etiquetas-${nfSlug}.pdf`)}>Visualizar / Imprimir Etiquetas</Btn>
