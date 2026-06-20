@@ -22,13 +22,27 @@ function limparCnpj(cnpj) {
   return cnpj.replace(/\D/g, "");
 }
 
+function extrairPrimeiroTelefone(texto) {
+  if (!texto) return null;
+  const padrao = /\(?\d{2}\)?\s?\d{4,5}-?\d{4}/g;
+  const match = texto.match(padrao);
+  if (!match) return null;
+  let num = match[0].replace(/\D/g, "");
+  if (num.length === 10) num = `(${num.slice(0, 2)}) ${num.slice(2, 6)}-${num.slice(6)}`;
+  else if (num.length === 11) num = `(${num.slice(0, 2)}) ${num.slice(2, 7)}-${num.slice(7)}`;
+  return num;
+}
+
 async function buscarReceitaWS(cnpj) {
   const url = `https://www.receitaws.com.br/v1/cnpj/${cnpj}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
   if (!res.ok) throw new Error(`ReceitaWS ${res.status}`);
   const data = await res.json();
   if (data.status === "ERROR") throw new Error("ReceitaWS: " + (data.message || "erro"));
-  if (data.telefone) return data.telefone.trim();
+  if (data.telefone) {
+    const tel = extrairPrimeiroTelefone(data.telefone);
+    if (tel) return tel;
+  }
   return null;
 }
 
@@ -126,24 +140,23 @@ export default async function handler(req, res) {
     }
 
     const localizacao = [cidade_transp, uf_transp].filter(Boolean).join(" - ");
-    const prompt = `Você é um assistente que conhece empresas brasileiras. Encontre o telefone de contato comercial da transportadora "${transportadora}"${localizacao ? ` localizada em ${localizacao}` : ""}.
+    const prompt = `Qual o número de telefone de contato da transportadora brasileira "${transportadora}"${localizacao ? ` localizada em ${localizacao}` : ""}?
 
-Regras:
-- Responda APENAS com o número completo com DDD, sem texto adicional.
-- Pode ser fixo ou celular. Ex: (51) 1234-5678 ou (51) 91234-5678.
-- Se houver mais de um número, informe o principal.
-- Se não souber, responda exatamente: "Não encontrado"`;
+IMPORTANTE: Responda APENAS com UM ÚNICO número de telefone completo com DDD.
+Exemplo válido: (51) 1234-5678 ou (51) 91234-5678
+Não escreva "Telefone:", "Celular:" ou qualquer texto extra.
+Se não souber o número, responda exatamente: "Não encontrado"`;
 
     const textMessages = [{ role: "user", content: [{ type: "text", text: prompt }] }];
 
     if (groqKey) {
-      try { const r = await callGroq(textMessages, groqKey); if (r && r !== "Não encontrado") return res.status(200).json({ telefone: r }); } catch {}
+      try { const r = await callGroq(textMessages, groqKey); const tel = extrairPrimeiroTelefone(r); if (tel) return res.status(200).json({ telefone: tel }); } catch {}
     }
     if (geminiKey) {
-      try { const r = await callGemini(prompt, geminiKey); if (r && r !== "Não encontrado") return res.status(200).json({ telefone: r }); } catch {}
+      try { const r = await callGemini(prompt, geminiKey); const tel = extrairPrimeiroTelefone(r); if (tel) return res.status(200).json({ telefone: tel }); } catch {}
     }
     if (orKey) {
-      try { const r = await callOpenRouter(textMessages, orKey); if (r && r !== "Não encontrado") return res.status(200).json({ telefone: r }); } catch {}
+      try { const r = await callOpenRouter(textMessages, orKey); const tel = extrairPrimeiroTelefone(r); if (tel) return res.status(200).json({ telefone: tel }); } catch {}
     }
 
     return res.status(200).json({ telefone: null });

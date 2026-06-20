@@ -483,6 +483,16 @@ export default function App() {
             parsed.endereco_transp = endereco;
           }
         } catch (e) { /* ignore */ }
+        // Limpa telefone — extrai apenas o primeiro número se a IA retornar múltiplos
+        if (parsed.telefone_transp) {
+          const match = String(parsed.telefone_transp).match(/\(?\d{2}\)?\s?\d{4,5}-?\d{4}/g);
+          if (match) {
+            let num = match[0].replace(/\D/g, "");
+            if (num.length === 10) num = `(${num.slice(0, 2)}) ${num.slice(2, 6)}-${num.slice(6)}`;
+            else if (num.length === 11) num = `(${num.slice(0, 2)}) ${num.slice(2, 7)}-${num.slice(7)}`;
+            parsed.telefone_transp = num;
+          }
+        }
         return parsed;
       } catch (e) {
         if (i === MAX_RETRIES - 1) throw e;
@@ -517,8 +527,8 @@ export default function App() {
         });
       }
 
-      // Busca telefone na web se estiver vazio
-      if (!shared.telefone_transp && shared.transportadora) {
+      // Busca telefone da transportadora — prioriza CNPJ (ReceitaWS = filial correta)
+      if (shared.transportadora) {
         setStatusMsg("Buscando telefone da transportadora...");
         try {
           const telRes = await fetch("/api/buscar-telefone", {
