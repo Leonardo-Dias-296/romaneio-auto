@@ -561,6 +561,11 @@ export default function App() {
         } catch {}
       }
 
+      // Preenche data/horário atuais como fallback
+      const agora = new Date();
+      if (!shared.data_retirada) shared.data_retirada = agora.toLocaleDateString("pt-BR");
+      if (!shared.horario_retirada) shared.horario_retirada = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
       setDados({ ...shared, notas: allNotas });
       setStep(3);
     } catch (err) { alert("Erro:\n" + err.message); setStep(1); }
