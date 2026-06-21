@@ -798,6 +798,7 @@ export default function App() {
       {/* Conteúdo principal (só exibe se logado) */}
       {authUser && (
       <>
+      {tab !== "admin" && (
       <div style={{ background: "#fff", borderBottom: "1px solid #E2E8F0", padding: "14px 28px", display: "flex", position: "relative", zIndex: 1 }}>
         {wizardSteps.map((s, i) => {
           const n = i + 1, done = step > n, active = step === n;
@@ -810,6 +811,7 @@ export default function App() {
           );
         })}
       </div>
+      )}
 
       <div style={{ padding: 28, maxWidth: 1200, margin: "0 auto", position: "relative", zIndex: 1 }}>
 
@@ -855,7 +857,7 @@ export default function App() {
         )}
 
         {/* STEP 3 */}
-        {step === 3 && (
+        {step === 3 && tab !== "admin" && (
           <div>
             <div style={{ display: "flex", gap: 0, marginBottom: 24, background: "#fff", border: "1px solid #E2E8F0", borderRadius: 8, padding: 3, width: "fit-content" }}>
               {[["romaneio", "Romaneio"], ["etiquetas", `Etiquetas (${totalLabels})`]].map(([id, label]) => (
@@ -969,45 +971,46 @@ export default function App() {
                 </div>
               </div>
             )}
+          </div>
+        )}
 
-            {tab === "admin" && isAdm(authUser) && (
-              <div>
-                <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #E2E8F0", overflow: "hidden" }}>
-                  <div style={{ padding: "16px 20px", borderBottom: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "#0F172A" }}>Gerenciar Usuários</span>
-                    <span style={{ fontSize: 12, color: "#64748B" }}>{adminUsers.length} usuário(s)</span>
+        {/* Admin Panel (independente do step) */}
+        {tab === "admin" && isAdm(authUser) && (
+          <div>
+            <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #E2E8F0", overflow: "hidden" }}>
+              <div style={{ padding: "16px 20px", borderBottom: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: "#0F172A" }}>Gerenciar Usuários</span>
+                <span style={{ fontSize: 12, color: "#64748B" }}>{adminUsers.length} usuário(s)</span>
+              </div>
+              <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, padding: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Criar novo usuário</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                    <Field label="Nome" value={adminNovoNome} onChange={setAdminNovoNome} />
+                    <div></div>
+                    <Field label="Email" value={adminNovoEmail} onChange={setAdminNovoEmail} />
+                    <Field label="Senha" value={adminNovaSenha} onChange={setAdminNovaSenha} />
                   </div>
-                  <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-                    <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, padding: 16 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Criar novo usuário</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-                        <Field label="Nome" value={adminNovoNome} onChange={setAdminNovoNome} />
-                        <div></div>
-                        <Field label="Email" value={adminNovoEmail} onChange={setAdminNovoEmail} />
-                        <Field label="Senha" value={adminNovaSenha} onChange={setAdminNovaSenha} />
+                  <button onClick={adminCreateUser} disabled={adminBusy}
+                    style={{ background: "#16A34A", color: "#fff", border: "none", padding: "9px 20px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: adminBusy ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+                    {adminBusy ? "Criando..." : "Criar Usuário"}
+                  </button>
+                </div>
+                {adminMsg && <div style={{ color: adminMsg.includes("sucesso") || adminMsg.includes("excluído") ? "#16A34A" : "#EF4444", fontSize: 12, fontWeight: 600 }}>{adminMsg}</div>}
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {adminUsers.map(u => (
+                    <div key={u.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, padding: "10px 16px" }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#0F172A" }}>{u.user_metadata?.nome || "Sem nome"}</div>
+                        <div style={{ fontSize: 11, color: "#64748B" }}>{u.email} {isAdm(u) && <span style={{ background: "#FEF3C7", color: "#92400E", fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, marginLeft: 6 }}>ADMIN</span>}</div>
                       </div>
-                      <button onClick={adminCreateUser} disabled={adminBusy}
-                        style={{ background: "#16A34A", color: "#fff", border: "none", padding: "9px 20px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: adminBusy ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
-                        {adminBusy ? "Criando..." : "Criar Usuário"}
-                      </button>
+                      {!isAdm(u) && <button onClick={() => adminDeleteUser(u.id, u.email)} disabled={adminBusy} style={{ background: "#FEE2E2", color: "#DC2626", border: "none", padding: "6px 12px", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Excluir</button>}
                     </div>
-                    {adminMsg && <div style={{ color: adminMsg.includes("sucesso") || adminMsg.includes("excluído") ? "#16A34A" : "#EF4444", fontSize: 12, fontWeight: 600 }}>{adminMsg}</div>}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {adminUsers.map(u => (
-                        <div key={u.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, padding: "10px 16px" }}>
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: "#0F172A" }}>{u.user_metadata?.nome || "Sem nome"}</div>
-                            <div style={{ fontSize: 11, color: "#64748B" }}>{u.email} {isAdm(u) && <span style={{ background: "#FEF3C7", color: "#92400E", fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, marginLeft: 6 }}>ADMIN</span>}</div>
-                          </div>
-                          {!isAdm(u) && <button onClick={() => adminDeleteUser(u.id, u.email)} disabled={adminBusy} style={{ background: "#FEE2E2", color: "#DC2626", border: "none", padding: "6px 12px", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Excluir</button>}
-                        </div>
-                      ))}
-                      {adminUsers.length === 0 && !adminBusy && <div style={{ fontSize: 13, color: "#94A3B8", textAlign: "center", padding: 20 }}>Clique em "Admin" no header para carregar</div>}
-                    </div>
-                  </div>
+                  ))}
+                  {adminUsers.length === 0 && !adminBusy && <div style={{ fontSize: 13, color: "#94A3B8", textAlign: "center", padding: 20 }}>Nenhum usuário carregado</div>}
                 </div>
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>
