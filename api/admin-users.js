@@ -1,4 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
+
+function hashSenha(senha) {
+  return crypto.createHash("sha256").update(senha).digest("hex");
+}
 
 const SUPABASE_URL = "https://budpftetbhmpghpyagcs.supabase.co";
 const SECRET_KEY = process.env.SUPABASE_SECRET_KEY;
@@ -26,7 +31,7 @@ const supabaseAdmin = createClient(SUPABASE_URL, SECRET_KEY, {
 });
 
 // Inserir na tabela usuarios (com senha_hash dummy para coluna NOT NULL)
-async function insertUsuario(nome, email, role) {
+async function insertUsuario(nome, email, role, senha) {
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/usuarios`, {
       method: "POST",
@@ -35,7 +40,12 @@ async function insertUsuario(nome, email, role) {
         "Content-Type": "application/json",
         Prefer: "return=representation",
       },
-      body: JSON.stringify({ nome, email, senha_hash: "supabase_auth", role: role || "user", criado_em: Date.now() }),
+      body: JSON.stringify({
+        nome, email,
+        senha_hash: senha ? hashSenha(senha) : "supabase_auth",
+        role: role || "user",
+        criado_em: Date.now(),
+      }),
     });
     if (!r.ok) {
       const err = await r.text();
@@ -105,7 +115,7 @@ export default async function handler(req, res) {
     });
     if (authError) return res.status(400).json({ erro: authError.message });
 
-    const dbResult = await insertUsuario(nome, email, "user");
+    const dbResult = await insertUsuario(nome, email, "user", password);
 
     return res.status(200).json({ user: authData.user, dbResult });
   }
