@@ -317,6 +317,9 @@ function EtiquetasCapture({ dados }) {
   );
 }
 
+const ADMIN_EMAILS = ["leonardoestudotrabalho2026@gmail.com"];
+const isAdm = (u) => u && (ADMIN_EMAILS.includes(u.email) || u.app_metadata?.role === "admin");
+
 // ── Main App ───────────────────────────────────────────────────
 export default function App() {
   const [step, setStep] = useState(1);
@@ -338,6 +341,12 @@ export default function App() {
   const [loginErro, setLoginErro] = useState("");
   const [loginSucesso, setLoginSucesso] = useState("");
   const [loginBusy, setLoginBusy] = useState(false);
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [adminBusy, setAdminBusy] = useState(false);
+  const [adminMsg, setAdminMsg] = useState("");
+  const [adminNovoEmail, setAdminNovoEmail] = useState("");
+  const [adminNovoNome, setAdminNovoNome] = useState("");
+  const [adminNovaSenha, setAdminNovaSenha] = useState("");
   const romaneioRef = useRef();
   const etiquetasRef = useRef();
   const fileRef = useRef();
@@ -654,6 +663,46 @@ export default function App() {
     setStep(1); setDados({});
   }
 
+  // ── Admin functions ──────────────────────────────────────────
+  async function adminFetch(path, opts = {}) {
+    const token = localStorage.getItem("sb_token");
+    return fetch(path, { ...opts, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts.headers } });
+  }
+  async function adminLoadUsers() {
+    setAdminBusy(true); setAdminMsg("");
+    try {
+      const r = await adminFetch("/api/admin-users");
+      const data = await r.json();
+      if (!r.ok) { setAdminMsg(data.erro || "Erro ao carregar"); return; }
+      setAdminUsers(data.users || []);
+    } catch (e) { setAdminMsg(e.message); }
+    finally { setAdminBusy(false); }
+  }
+  async function adminCreateUser() {
+    if (!adminNovoEmail || !adminNovaSenha) { setAdminMsg("Email e senha obrigatórios"); return; }
+    setAdminBusy(true); setAdminMsg("");
+    try {
+      const r = await adminFetch("/api/admin-users", { method: "POST", body: JSON.stringify({ email: adminNovoEmail, password: adminNovaSenha, nome: adminNovoNome }) });
+      const data = await r.json();
+      if (!r.ok) { setAdminMsg(data.erro || "Erro ao criar"); return; }
+      setAdminMsg("Usuário criado com sucesso!");
+      setAdminNovoEmail(""); setAdminNovoNome(""); setAdminNovaSenha("");
+      adminLoadUsers();
+    } catch (e) { setAdminMsg(e.message); }
+    finally { setAdminBusy(false); }
+  }
+  async function adminDeleteUser(id, email) {
+    if (!confirm(`Excluir o usuário ${email}?`)) return;
+    setAdminBusy(true); setAdminMsg("");
+    try {
+      const r = await adminFetch(`/api/admin-users?id=${id}`, { method: "DELETE" });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); setAdminMsg(d.erro || "Erro ao excluir"); return; }
+      setAdminMsg("Usuário excluído!");
+      adminLoadUsers();
+    } catch (e) { setAdminMsg(e.message); }
+    finally { setAdminBusy(false); }
+  }
+
   const wizardSteps = ["Enviar NF", "Processando", "Resultado"];
 
   return (
@@ -739,6 +788,7 @@ export default function App() {
       <div style={{ background: "#0F172A", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 28px", position: "relative", zIndex: 1, minHeight: 56 }}>
         <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>Grupo Sollar - Friclim</div>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          {isAdm(authUser) && <button onClick={() => { setTab("admin"); adminLoadUsers(); }} style={{ background: tab === "admin" ? "#F59E0B" : "rgba(255,255,255,.1)", color: tab === "admin" ? "#000" : "#fff", border: "none", padding: "6px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Admin</button>}
           <span style={{ color: "rgba(255,255,255,.7)", fontSize: 12, fontWeight: 500 }}>{authUser.user_metadata?.nome || authUser.email}</span>
           <button onClick={handleLogout} style={{ background: "rgba(255,255,255,.1)", color: "#fff", border: "none", padding: "6px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Sair</button>
         </div>
@@ -916,6 +966,45 @@ export default function App() {
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                   <Btn busy={busy} onClick={() => handlePreview(etiquetasRef, `etiquetas-${nfSlug}.pdf`)}>Visualizar / Imprimir Etiquetas</Btn>
                   <Btn busy={busy} color="#334155" onClick={() => handleDownload(etiquetasRef, `etiquetas-${nfSlug}.pdf`)}>Baixar PDF das Etiquetas</Btn>
+                </div>
+              </div>
+            )}
+
+            {tab === "admin" && isAdm(authUser) && (
+              <div>
+                <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #E2E8F0", overflow: "hidden" }}>
+                  <div style={{ padding: "16px 20px", borderBottom: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#0F172A" }}>Gerenciar Usuários</span>
+                    <span style={{ fontSize: 12, color: "#64748B" }}>{adminUsers.length} usuário(s)</span>
+                  </div>
+                  <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+                    <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, padding: 16 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Criar novo usuário</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                        <Field label="Nome" value={adminNovoNome} onChange={setAdminNovoNome} />
+                        <div></div>
+                        <Field label="Email" value={adminNovoEmail} onChange={setAdminNovoEmail} />
+                        <Field label="Senha" value={adminNovaSenha} onChange={setAdminNovaSenha} />
+                      </div>
+                      <button onClick={adminCreateUser} disabled={adminBusy}
+                        style={{ background: "#16A34A", color: "#fff", border: "none", padding: "9px 20px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: adminBusy ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+                        {adminBusy ? "Criando..." : "Criar Usuário"}
+                      </button>
+                    </div>
+                    {adminMsg && <div style={{ color: adminMsg.includes("sucesso") || adminMsg.includes("excluído") ? "#16A34A" : "#EF4444", fontSize: 12, fontWeight: 600 }}>{adminMsg}</div>}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {adminUsers.map(u => (
+                        <div key={u.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, padding: "10px 16px" }}>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "#0F172A" }}>{u.user_metadata?.nome || "Sem nome"}</div>
+                            <div style={{ fontSize: 11, color: "#64748B" }}>{u.email} {isAdm(u) && <span style={{ background: "#FEF3C7", color: "#92400E", fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, marginLeft: 6 }}>ADMIN</span>}</div>
+                          </div>
+                          {!isAdm(u) && <button onClick={() => adminDeleteUser(u.id, u.email)} disabled={adminBusy} style={{ background: "#FEE2E2", color: "#DC2626", border: "none", padding: "6px 12px", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Excluir</button>}
+                        </div>
+                      ))}
+                      {adminUsers.length === 0 && !adminBusy && <div style={{ fontSize: 13, color: "#94A3B8", textAlign: "center", padding: 20 }}>Clique em "Admin" no header para carregar</div>}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
