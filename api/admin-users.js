@@ -30,7 +30,7 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     try {
       const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?page=1&per_page=100`, {
-        headers: { apikey: ANON_KEY, Authorization: `Bearer ${SECRET_KEY}`, "Content-Type": "application/json" },
+        headers: { apikey: SECRET_KEY, Authorization: `Bearer ${SECRET_KEY}`, "Content-Type": "application/json" },
       });
       const data = await r.json();
       if (!r.ok) return res.status(r.status).json({ erro: data.msg || "Erro ao listar usuários" });
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     try {
       const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
         method: "POST",
-        headers: { apikey: ANON_KEY, Authorization: `Bearer ${SECRET_KEY}`, "Content-Type": "application/json" },
+        headers: { apikey: SECRET_KEY, Authorization: `Bearer ${SECRET_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, email_confirm: true, user_metadata: { nome } }),
       });
       const data = await r.json();
@@ -63,7 +63,7 @@ export default async function handler(req, res) {
     try {
       const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${id}`, {
         method: "DELETE",
-        headers: { apikey: ANON_KEY, Authorization: `Bearer ${SECRET_KEY}` },
+        headers: { apikey: SECRET_KEY, Authorization: `Bearer ${SECRET_KEY}` },
       });
       if (!r.ok) {
         const data = await r.json().catch(() => ({}));
