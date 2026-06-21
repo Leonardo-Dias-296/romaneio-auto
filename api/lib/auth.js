@@ -1,21 +1,28 @@
 import crypto from "crypto";
 
+const PROJ_ID = "prj_XnAnSNHUJ9Hxvza3suHoAxHqLc9j";
+const TEAM_ID = "team_4jXLEwrThN7uCEBicFejKpYW";
+
 function getSecret() {
   return process.env.JWT_SECRET || "romaneio-auto-secret-dev";
 }
 
-function hashSenha(senha) {
+export function hashSenha(senha) {
   return crypto.createHash("sha256").update(senha).digest("hex");
 }
 
-function gerarToken(payload) {
+function getToken() {
+  return process.env.VERCEL_API_TOKEN || "";
+}
+
+export function gerarToken(payload) {
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
   const body = Buffer.from(JSON.stringify({ ...payload, iat: Date.now() })).toString("base64url");
   const assinatura = crypto.createHmac("sha256", getSecret()).update(`${header}.${body}`).digest("base64url");
   return `${header}.${body}.${assinatura}`;
 }
 
-function verificarToken(token) {
+export function verificarToken(token) {
   try {
     const [header, body, assinatura] = token.split(".");
     if (!header || !body || !assinatura) return null;
@@ -27,45 +34,56 @@ function verificarToken(token) {
   }
 }
 
-async function getKV() {
+function getUsuariosFromEnv() {
   try {
-    const { kv } = await import("@vercel/kv");
-    return kv;
+    return JSON.parse(process.env.USUARIOS || "[]");
   } catch {
-    return null;
+    return [];
   }
 }
 
-async function autenticar(email, senha) {
-  // Admin (env vars)
+export async function autenticar(email, senha) {
   if (email === process.env.ADMIN_EMAIL && senha === process.env.ADMIN_PASSWORD) {
     return { email, nome: "Administrador", role: "admin" };
   }
-  // Usuários no KV
-  const kv = await getKV();
-  if (kv) {
-    const usuarios = await kv.get("usuarios") || [];
-    const user = usuarios.find(u => u.email === email && u.senhaHash === hashSenha(senha));
-    if (user) return { email: user.email, nome: user.nome, role: "user" };
-  }
+  const usuarios = getUsuariosFromEnv();
+  const user = usuarios.find(u => u.email === email && u.senhaHash === hashSenha(senha));
+  if (user) return { email: user.email, nome: user.nome, role: "user" };
   return null;
 }
 
-async function listarUsuarios() {
-  const kv = await getKV();
-  if (!kv) return [];
-  const usuarios = await kv.get("usuarios") || [];
-  return usuarios.map(({ email, nome, role }) => ({ email, nome, role }));
+export async function listarUsuarios() {
+  return getUsuariosFromEnv().map(({ email, nome, role }) => ({ email, nome, role }));
 }
 
-async function criarUsuario(nome, email, senha) {
-  const kv = await getKV();
-  if (!kv) throw new Error("Vercel KV não configurado.");
-  const usuarios = await kv.get("usuarios") || [];
+export async function criarUsuario(nome, email, senha) {
+  const usuarios = getUsuariosFromEnv();
   if (usuarios.find(u => u.email === email)) throw new Error("Email já cadastrado.");
   usuarios.push({ nome, email, senhaHash: hashSenha(senha), role: "user", criadoEm: Date.now() });
-  await kv.set("usuarios", usuarios);
+
+  const apiToken = getToken();
+  if (!apiToken) throw new Error("VERCEL_API_TOKEN não configurado.");
+
+  const body = {
+    key: "USUARIOS",
+    value: JSON.stringify(usuarios),
+    type: "encrypted",
+    target: ["production", "preview", "development"],
+  };
+
+  const res = await fetch(`https://api.vercel.com/v10/projects/${PROJ_ID}/env?teamId=${TEAM_ID}`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error("Erro ao salvar no Vercel: " + err);
+  }
+
   return { email, nome, role: "user" };
 }
-
-export { gerarToken, verificarToken, autenticar, listarUsuarios, criarUsuario, hashSenha };
