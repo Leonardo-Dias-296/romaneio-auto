@@ -1,7 +1,7 @@
 import crypto from "crypto";
 
-const PROJ_ID = "prj_XnAnSNHUJ9Hxvza3suHoAxHqLc9j";
-const TEAM_ID = "team_4jXLEwrThN7uCEBicFejKpYW";
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
+const SUPABASE_KEY = process.env.SUPABASE_SECRET_KEY || "";
 
 function getSecret() {
   return process.env.JWT_SECRET || "romaneio-auto-secret-dev";
@@ -9,10 +9,6 @@ function getSecret() {
 
 export function hashSenha(senha) {
   return crypto.createHash("sha256").update(senha).digest("hex");
-}
-
-function getToken() {
-  return process.env.VERCEL_API_TOKEN || "";
 }
 
 export function gerarToken(payload) {
@@ -34,56 +30,65 @@ export function verificarToken(token) {
   }
 }
 
-function getUsuariosFromEnv() {
-  try {
-    return JSON.parse(process.env.USUARIOS || "[]");
-  } catch {
-    return [];
+async function supabaseQuery(path) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: {
+      "apikey": SUPABASE_KEY,
+      "Authorization": `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
+async function supabaseInsert(data) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios`, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_KEY,
+      "Authorization": `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation",
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    if (err.includes("duplicate")) throw new Error("Email já cadastrado.");
+    throw new Error(`Supabase ${res.status}: ${err}`);
   }
+  return res.json();
 }
 
 export async function autenticar(email, senha) {
   if (email === process.env.ADMIN_EMAIL && senha === process.env.ADMIN_PASSWORD) {
     return { email, nome: "Administrador", role: "admin" };
   }
-  const usuarios = getUsuariosFromEnv();
-  const user = usuarios.find(u => u.email === email && u.senhaHash === hashSenha(senha));
-  if (user) return { email: user.email, nome: user.nome, role: "user" };
+  try {
+    const usuarios = await supabaseQuery(`usuarios?email=eq.${encodeURIComponent(email)}&select=*`);
+    const user = usuarios.find(u => u.senha_hash === hashSenha(senha));
+    if (user) return { email: user.email, nome: user.nome, role: user.role };
+  } catch {}
   return null;
 }
 
 export async function listarUsuarios() {
-  return getUsuariosFromEnv().map(({ email, nome, role }) => ({ email, nome, role }));
+  try {
+    const usuarios = await supabaseQuery("usuarios?select=nome,email,role");
+    return usuarios;
+  } catch {
+    return [];
+  }
 }
 
 export async function criarUsuario(nome, email, senha) {
-  const usuarios = getUsuariosFromEnv();
-  if (usuarios.find(u => u.email === email)) throw new Error("Email já cadastrado.");
-  usuarios.push({ nome, email, senhaHash: hashSenha(senha), role: "user", criadoEm: Date.now() });
-
-  const apiToken = getToken();
-  if (!apiToken) throw new Error("VERCEL_API_TOKEN não configurado.");
-
-  const body = {
-    key: "USUARIOS",
-    value: JSON.stringify(usuarios),
-    type: "encrypted",
-    target: ["production", "preview", "development"],
-  };
-
-  const res = await fetch(`https://api.vercel.com/v10/projects/${PROJ_ID}/env?teamId=${TEAM_ID}`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
+  const result = await supabaseInsert({
+    nome,
+    email,
+    senha_hash: hashSenha(senha),
+    role: "user",
+    criado_em: Date.now(),
   });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error("Erro ao salvar no Vercel: " + err);
-  }
-
-  return { email, nome, role: "user" };
+  return { email: result[0].email, nome: result[0].nome, role: result[0].role };
 }
