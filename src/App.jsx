@@ -695,7 +695,7 @@ export default function App() {
     if (!confirm(`Excluir o usuário ${email}?`)) return;
     setAdminBusy(true); setAdminMsg("");
     try {
-      const r = await adminFetch(`/api/admin-users?id=${id}`, { method: "DELETE" });
+      const r = await adminFetch(`/api/admin-users?id=${id}&email=${encodeURIComponent(email)}`, { method: "DELETE" });
       if (!r.ok) { const d = await r.json().catch(() => ({})); setAdminMsg(d.erro || "Erro ao excluir"); return; }
       setAdminMsg("Usuário excluído!");
       adminLoadUsers();

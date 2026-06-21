@@ -21,7 +21,31 @@ function isAdmin(user) {
   return ADMIN_EMAILS.includes(user.email);
 }
 
-const supabaseAdmin = createClient(SUPABASE_URL, SECRET_KEY);
+// Usa fetch direto para REST (evita header Authorization que quebra com chave nova)
+async function restInsert(table, data) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: "POST",
+    headers: { apikey: SECRET_KEY, "Content-Type": "application/json", Prefer: "return=representation" },
+    body: JSON.stringify(data),
+  });
+}
+async function restSelect(table, email) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?email=eq.${encodeURIComponent(email)}&select=email`, {
+    headers: { apikey: SECRET_KEY },
+  });
+  if (!r.ok) return null;
+  return r.json();
+}
+async function restDelete(table, email) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${table}?email=eq.${encodeURIComponent(email)}`, {
+    method: "DELETE",
+    headers: { apikey: SECRET_KEY },
+  });
+}
+
+const supabaseAdmin = createClient(SUPABASE_URL, SECRET_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
 
 export default async function handler(req, res) {
   const auth = req.headers.authorization;
@@ -34,19 +58,17 @@ export default async function handler(req, res) {
     const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 100 });
     if (error) return res.status(400).json({ erro: error.message });
 
-    // Sincroniza usuários do Auth para a tabela usuarios
+    // Sincroniza Auth → tabela usuarios
     if (data.users) {
       for (const u of data.users) {
-        const { data: existing } = await supabaseAdmin.from("usuarios").select("email").eq("email", u.email).maybeSingle();
-        if (!existing) {
-          try {
-            await supabaseAdmin.from("usuarios").insert({
-              nome: u.user_metadata?.nome || u.email.split("@")[0],
-              email: u.email,
-              role: ADMIN_EMAILS.includes(u.email) ? "admin" : "user",
-              criado_em: Date.now(),
-            });
-          } catch {}
+        const existing = await restSelect("usuarios", u.email);
+        if (!existing || existing.length === 0) {
+          await restInsert("usuarios", {
+            nome: u.user_metadata?.nome || u.email.split("@")[0],
+            email: u.email,
+            role: ADMIN_EMAILS.includes(u.email) ? "admin" : "user",
+            criado_em: Date.now(),
+          });
         }
       }
     }
@@ -62,31 +84,19 @@ export default async function handler(req, res) {
       email, password, emailConfirm: true, userMetadata: { nome },
     });
     if (authError) return res.status(400).json({ erro: authError.message });
-    const uid = authData.user?.id;
 
-    try {
-      await supabaseAdmin.from("usuarios").insert({
-        nome, email, role: "user", criado_em: Date.now(),
-      });
-    } catch (dbErr) {
-      // fallback: tenta sem role se a coluna não existir
-      try {
-        await supabaseAdmin.from("usuarios").insert({
-          nome, email, criado_em: Date.now(),
-        });
-      } catch {} // ignora se a tabela não existir
-    }
+    await restInsert("usuarios", {
+      nome, email, role: "user", criado_em: Date.now(),
+    });
 
     return res.status(200).json(authData.user);
   }
 
   if (req.method === "DELETE") {
-    const { id } = req.query;
+    const { id, email } = req.query;
     if (!id) return res.status(400).json({ erro: "ID obrigatório" });
 
-    try {
-      await supabaseAdmin.from("usuarios").delete().eq("id", id);
-    } catch {}
+    if (email) await restDelete("usuarios", email);
 
     const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
     if (error) return res.status(400).json({ erro: error.message });
