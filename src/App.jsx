@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { supabase, signUp, signIn } from "./lib/supabase.js";
+import { signUp, signIn, getUser } from "./lib/supabase.js";
 
 // Chama sempre /api/extrair — relativo ao domínio atual.
 // Em dev (vercel dev): http://localhost:3000/api/extrair
@@ -348,9 +348,7 @@ export default function App() {
   useEffect(() => {
     const token = localStorage.getItem("sb_token");
     if (token) {
-      fetch("https://budpfteibhmpghpyagcs.supabase.co/auth/v1/user", {
-        headers: { apikey: "sb_publishable_4Is-dFQMf1SQEgizreCuiA_4fs2-TE0", Authorization: `Bearer ${token}` },
-      }).then(r => r.ok ? r.json() : null).then(u => {
+      getUser(token).then(u => {
         setAuthUser(u || null);
         if (!u) localStorage.removeItem("sb_token");
         setAuthLoading(false);
