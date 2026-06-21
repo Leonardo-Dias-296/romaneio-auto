@@ -328,11 +328,37 @@ export default function App() {
   const [statusMsg, setStatusMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [modal, setModal] = useState(null);
+  const [authToken, setAuthToken] = useState(localStorage.getItem("authToken") || "");
+  const [authUser, setAuthUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [paginaAdm, setPaginaAdm] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginSenha, setLoginSenha] = useState("");
+  const [loginErro, setLoginErro] = useState("");
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [admUsuarios, setAdmUsuarios] = useState([]);
+  const [admNovoNome, setAdmNovoNome] = useState("");
+  const [admNovoEmail, setAdmNovoEmail] = useState("");
+  const [admNovoSenha, setAdmNovoSenha] = useState("");
+  const [admMsg, setAdmMsg] = useState("");
   const romaneioRef = useRef();
   const etiquetasRef = useRef();
   const fileRef = useRef();
 
   useEffect(() => { if (step === 3) ensureLibs().catch(() => {}); }, [step]);
+
+  // Verifica token ao montar
+  useEffect(() => {
+    (async () => {
+      if (!authToken) { setAuthLoading(false); return; }
+      try {
+        const r = await fetch("/api/verificar", { headers: { Authorization: `Bearer ${authToken}` } });
+        if (r.ok) { const d = await r.json(); setAuthUser(d.user); }
+        else { localStorage.removeItem("authToken"); setAuthToken(""); }
+      } catch { localStorage.removeItem("authToken"); setAuthToken(""); }
+      setAuthLoading(false);
+    })();
+  }, []);
 
   // helper: current page size in mm
   function currentPageSize() {
@@ -589,6 +615,58 @@ export default function App() {
       notas: prev.notas.filter((_, i) => i !== idx),
     }));
   }
+
+  async function handleLogin() {
+    setLoginErro(""); setLoginBusy(true);
+    try {
+      const r = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: loginEmail, senha: loginSenha }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setLoginErro(d.erro || "Erro ao fazer login"); return; }
+      localStorage.setItem("authToken", d.token);
+      setAuthToken(d.token);
+      setAuthUser(d.user);
+      setLoginEmail("");
+      setLoginSenha("");
+    } catch { setLoginErro("Erro de conexão"); }
+    finally { setLoginBusy(false); }
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("authToken");
+    setAuthToken("");
+    setAuthUser(null);
+    setStep(1);
+    setDados({});
+  }
+
+  async function carregarUsuarios() {
+    try {
+      const r = await fetch("/api/usuarios", { headers: { Authorization: `Bearer ${authToken}` } });
+      if (r.ok) { const d = await r.json(); setAdmUsuarios(d.usuarios); }
+    } catch {}
+  }
+
+  async function criarUsuario() {
+    setAdmMsg("");
+    if (!admNovoNome || !admNovoEmail || !admNovoSenha) { setAdmMsg("Preencha todos os campos."); return; }
+    try {
+      const r = await fetch("/api/usuarios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ nome: admNovoNome, email: admNovoEmail, senha: admNovoSenha }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setAdmMsg(d.erro || "Erro"); return; }
+      setAdmNovoNome(""); setAdmNovoEmail(""); setAdmNovoSenha("");
+      setAdmMsg("Usuário criado com sucesso!");
+      carregarUsuarios();
+    } catch { setAdmMsg("Erro de conexão"); }
+  }
+
   const wizardSteps = ["Enviar NF", "Processando", "Resultado"];
 
   return (
@@ -614,13 +692,104 @@ export default function App() {
 
       {modal && <PreviewModal imgDataUrl={modal.imgDataUrl} pdfBlob={modal.pdfBlob} filename={modal.filename} onClose={() => setModal(null)} />}
 
-      {/* Header */}
-      <div style={{ background: "#0F172A", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 28px", position: "relative", zIndex: 1 }}>
-        <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>Grupo Sollar - Friclim</div>
-        <span style={{ color: "rgba(255,255,255,.85)", fontSize: 14, fontWeight: 600 }}>RomaneioAuto</span>
-      </div>
+      {/* Tela de Login */}
+      {!authUser && !authLoading && (
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0F172A", position: "relative", zIndex: 1 }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: "40px 36px", width: 380, maxWidth: "90%", boxShadow: "0 20px 60px rgba(0,0,0,.3)" }}>
+            <div style={{ textAlign: "center", marginBottom: 28 }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: "#0F172A" }}>RomaneioAuto</div>
+              <div style={{ fontSize: 12, color: "#64748B", fontWeight: 600, marginTop: 4 }}>Faça login para continuar</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.8px" }}>Email</span>
+                <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)}
+                  style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "9px 12px", fontSize: 14, fontFamily: "inherit", outline: "none", marginTop: 4, boxSizing: "border-box" }}
+                  onKeyDown={e => e.key === "Enter" && handleLogin()} />
+              </div>
+              <div>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.8px" }}>Senha</span>
+                <input type="password" value={loginSenha} onChange={e => setLoginSenha(e.target.value)}
+                  style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "9px 12px", fontSize: 14, fontFamily: "inherit", outline: "none", marginTop: 4, boxSizing: "border-box" }}
+                  onKeyDown={e => e.key === "Enter" && handleLogin()} />
+              </div>
+              {loginErro && <div style={{ color: "#EF4444", fontSize: 12, fontWeight: 600, textAlign: "center" }}>{loginErro}</div>}
+              <button onClick={handleLogin} disabled={loginBusy}
+                style={{ background: loginBusy ? "#94A3B8" : "#0F172A", color: "#fff", border: "none", padding: "11px 0", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: loginBusy ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+                {loginBusy ? "Entrando..." : "Entrar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Wizard */}
+      {authLoading && (
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0F172A" }}>
+          <div style={{ color: "#fff", fontSize: 15 }}>Carregando...</div>
+        </div>
+      )}
+
+      {/* Header */}
+      {authUser && (
+      <div style={{ background: "#0F172A", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 28px", position: "relative", zIndex: 1, minHeight: 56 }}>
+        <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>Grupo Sollar - Friclim</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          {authUser.role === "admin" && (
+            <button onClick={() => { setPaginaAdm(p => !p); if (!paginaAdm) carregarUsuarios(); }}
+              style={{ background: paginaAdm ? "#334155" : "rgba(255,255,255,.12)", color: "#fff", border: "none", padding: "6px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              {paginaAdm ? "Voltar" : "Admin"}
+            </button>
+          )}
+          <span style={{ color: "rgba(255,255,255,.7)", fontSize: 12, fontWeight: 500 }}>{authUser.nome}</span>
+          <button onClick={handleLogout} style={{ background: "rgba(255,255,255,.1)", color: "#fff", border: "none", padding: "6px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Sair</button>
+        </div>
+      </div>
+      )}
+
+      {/* Painel Admin */}
+      {authUser && paginaAdm && (
+        <div style={{ padding: 28, maxWidth: 1200, margin: "0 auto", position: "relative", zIndex: 1 }}>
+          <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #E2E8F0", overflow: "hidden" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid #E2E8F0" }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "#0F172A" }}>Gerenciar Usuários</span>
+            </div>
+            <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+                <div style={{ flex: 1, minWidth: 140 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.8px" }}>Nome</span>
+                  <input value={admNovoNome} onChange={e => setAdmNovoNome(e.target.value)} placeholder="Nome" style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "9px 12px", fontSize: 13, fontFamily: "inherit", outline: "none", marginTop: 4, boxSizing: "border-box" }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.8px" }}>Email</span>
+                  <input value={admNovoEmail} onChange={e => setAdmNovoEmail(e.target.value)} placeholder="Email" style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "9px 12px", fontSize: 13, fontFamily: "inherit", outline: "none", marginTop: 4, boxSizing: "border-box" }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 140 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.8px" }}>Senha</span>
+                  <input value={admNovoSenha} onChange={e => setAdmNovoSenha(e.target.value)} type="password" placeholder="Senha" style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "9px 12px", fontSize: 13, fontFamily: "inherit", outline: "none", marginTop: 4, boxSizing: "border-box" }} />
+                </div>
+                <button onClick={criarUsuario} style={{ background: "#0F172A", color: "#fff", border: "none", padding: "9px 20px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", height: 38 }}>Criar</button>
+              </div>
+              {admMsg && <div style={{ fontSize: 12, fontWeight: 600, color: admMsg.includes("sucesso") ? "#16A34A" : "#EF4444" }}>{admMsg}</div>}
+              {admUsuarios.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Usuários cadastrados</div>
+                  {admUsuarios.map((u, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", background: i % 2 === 0 ? "#F8FAFC" : "#fff", borderRadius: 4 }}>
+                      <span style={{ fontWeight: 600, fontSize: 13, flex: 1 }}>{u.nome}</span>
+                      <span style={{ color: "#64748B", fontSize: 12, flex: 1 }}>{u.email}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", background: "#F1F5F9", padding: "2px 8px", borderRadius: 4 }}>{u.role}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Conteúdo principal (só exibe se logado e não no admin) */}
+      {authUser && !paginaAdm && (
+      <>
       <div style={{ background: "#fff", borderBottom: "1px solid #E2E8F0", padding: "14px 28px", display: "flex", position: "relative", zIndex: 1 }}>
         {wizardSteps.map((s, i) => {
           const n = i + 1, done = step > n, active = step === n;
@@ -795,6 +964,8 @@ export default function App() {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
