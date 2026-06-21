@@ -1,4 +1,4 @@
-const SUPABASE_URL = "https://budpfteibhmpghpyagcs.supabase.co";
+const SUPABASE_URL = "https://budpftetbhmpghpyagcs.supabase.co";
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || "sb_publishable_4Is-dFQMf1SQEgizreCuiA_4fs2-TE0";
 
 export default async function handler(req, res) {
