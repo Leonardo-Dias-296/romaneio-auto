@@ -1,23 +1,31 @@
 const SUPABASE_URL = "https://budpftetbhmpghpyagcs.supabase.co";
-const ANON_KEY = "sb_publishable_4Is-dFQMf1SQEgizreCuiA_4fs2-TE0";
+const ANON_KEY = process.env.SUPABASE_ANON_KEY || "sb_publishable_4Is-dFQMf1SQEgizreCuiA_4fs2-TE0";
 const SECRET_KEY = process.env.SUPABASE_SECRET_KEY;
 
 const ADMIN_EMAILS = ["leonardoestudotrabalho2026@gmail.com"];
 
-async function isAdmin(token) {
-  const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-    headers: { apikey: ANON_KEY, Authorization: `Bearer ${token}` },
-  });
-  if (!r.ok) return false;
-  const user = await r.json();
-  return ADMIN_EMAILS.includes(user.email) || user.app_metadata?.role === "admin";
+function decodeUserFromToken(token) {
+  try {
+    const parts = token.split(".");
+    if (parts.length === 3) {
+      const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
+      return { email: payload.email, id: payload.sub };
+    }
+    return null;
+  } catch { return null; }
+}
+
+function isAdmin(user) {
+  if (!user) return false;
+  return ADMIN_EMAILS.includes(user.email);
 }
 
 export default async function handler(req, res) {
   const auth = req.headers.authorization;
   if (!auth) return res.status(401).json({ erro: "Não autenticado" });
   const token = auth.replace("Bearer ", "");
-  if (!(await isAdmin(token))) return res.status(403).json({ erro: "Sem permissão de administrador" });
+  const user = decodeUserFromToken(token);
+  if (!isAdmin(user)) return res.status(403).json({ erro: "Sem permissão de administrador" });
 
   if (req.method === "GET") {
     try {
