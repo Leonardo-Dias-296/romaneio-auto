@@ -348,7 +348,7 @@ export default function App() {
   useEffect(() => {
     const token = localStorage.getItem("sb_token");
     if (token) {
-      fetch("https://budpfteibhmphgyagcs.supabase.co/auth/v1/user", {
+      fetch("https://budpfteibhmpghpyagcs.supabase.co/auth/v1/user", {
         headers: { apikey: "sb_publishable_4Is-dFQMf1SQEgizreCuiA_4fs2-TE0", Authorization: `Bearer ${token}` },
       }).then(r => r.ok ? r.json() : null).then(u => {
         setAuthUser(u || null);
