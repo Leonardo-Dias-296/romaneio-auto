@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { supabase } from "./lib/supabase.js";
+import { supabase, signUp, signIn } from "./lib/supabase.js";
 
 // Chama sempre /api/extrair — relativo ao domínio atual.
 // Em dev (vercel dev): http://localhost:3000/api/extrair
@@ -344,16 +344,20 @@ export default function App() {
 
   useEffect(() => { if (step === 3) ensureLibs().catch(() => {}); }, [step]);
 
-  // Verifica sessão Supabase ao montar
+  // Verifica sessão via localStorage + API direta
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setAuthUser(session?.user || null);
+    const token = localStorage.getItem("sb_token");
+    if (token) {
+      fetch("https://budpfteibhmphgyagcs.supabase.co/auth/v1/user", {
+        headers: { apikey: "sb_publishable_4Is-dFQMf1SQEgizreCuiA_4fs2-TE0", Authorization: `Bearer ${token}` },
+      }).then(r => r.ok ? r.json() : null).then(u => {
+        setAuthUser(u || null);
+        if (!u) localStorage.removeItem("sb_token");
+        setAuthLoading(false);
+      }).catch(() => { setAuthLoading(false); });
+    } else {
       setAuthLoading(false);
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuthUser(session?.user || null);
-    });
-    return () => listener?.subscription?.unsubscribe();
+    }
   }, []);
 
   // helper: current page size in mm
@@ -615,30 +619,27 @@ export default function App() {
   async function handleLogin() {
     setLoginErro(""); setLoginSucesso(""); setLoginBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginSenha });
-      if (error) { setLoginErro("Email ou senha inválidos."); return; }
+      const data = await signIn(loginEmail, loginSenha);
+      if (data.access_token) localStorage.setItem("sb_token", data.access_token);
+      setAuthUser(data.user || { email: loginEmail });
       setLoginEmail(""); setLoginSenha("");
-    } catch { setLoginErro("Erro de conexão"); }
+    } catch (e) { setLoginErro(e.message || "Email ou senha inválidos."); }
     finally { setLoginBusy(false); }
   }
 
   async function handleCadastro() {
     setLoginErro(""); setLoginSucesso(""); setLoginBusy(true);
     try {
-      const { error } = await supabase.auth.signUp({
-        email: loginEmail,
-        password: loginSenha,
-        options: { data: { nome: loginNome } },
-      });
-      if (error) { setLoginErro(error.message); return; }
+      await signUp(loginEmail, loginSenha, loginNome);
       setLoginSucesso("Conta criada! Verifique seu email para confirmar.");
       setLoginNome(""); setLoginEmail(""); setLoginSenha("");
-    } catch { setLoginErro("Erro de conexão"); }
+    } catch (e) { setLoginErro(e.message || "Erro de conexão"); }
     finally { setLoginBusy(false); }
   }
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    localStorage.removeItem("sb_token");
+    setAuthUser(null);
     setStep(1); setDados({});
   }
 
