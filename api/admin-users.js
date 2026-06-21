@@ -39,19 +39,37 @@ export default async function handler(req, res) {
   if (req.method === "POST") {
     const { email, password, nome } = req.body || {};
     if (!email || !password) return res.status(400).json({ erro: "Email e senha obrigatórios" });
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      emailConfirm: true,
-      userMetadata: { nome },
+
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email, password, emailConfirm: true, userMetadata: { nome },
     });
-    if (error) return res.status(400).json({ erro: error.message });
-    return res.status(200).json(data.user);
+    if (authError) return res.status(400).json({ erro: authError.message });
+    const uid = authData.user?.id;
+
+    try {
+      await supabaseAdmin.from("usuarios").insert({
+        nome, email, role: "user", criado_em: Date.now(),
+      });
+    } catch (dbErr) {
+      // fallback: tenta sem role se a coluna não existir
+      try {
+        await supabaseAdmin.from("usuarios").insert({
+          nome, email, criado_em: Date.now(),
+        });
+      } catch {} // ignora se a tabela não existir
+    }
+
+    return res.status(200).json(authData.user);
   }
 
   if (req.method === "DELETE") {
     const { id } = req.query;
     if (!id) return res.status(400).json({ erro: "ID obrigatório" });
+
+    try {
+      await supabaseAdmin.from("usuarios").delete().eq("id", id);
+    } catch {}
+
     const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
     if (error) return res.status(400).json({ erro: error.message });
     return res.status(200).json({ ok: true });
