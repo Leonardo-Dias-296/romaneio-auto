@@ -344,17 +344,30 @@ export default function App() {
 
   useEffect(() => { if (step === 3) ensureLibs().catch(() => {}); }, [step]);
 
-  // Verifica sessão via localStorage + API direta
+  // Verifica sessão via localStorage + API — inclui tratamento de confirmação de email
   useEffect(() => {
-    const token = localStorage.getItem("sb_token");
-    if (token) {
-      getUser(token).then(u => {
+    const hash = window.location.hash;
+    const params = new URLSearchParams(hash.replace(/^#/, ""));
+    const accessToken = params.get("access_token");
+
+    if (accessToken) {
+      localStorage.setItem("sb_token", accessToken);
+      window.history.replaceState(null, "", window.location.pathname);
+      getUser(accessToken).then(u => {
         setAuthUser(u || null);
-        if (!u) localStorage.removeItem("sb_token");
         setAuthLoading(false);
       }).catch(() => { setAuthLoading(false); });
     } else {
-      setAuthLoading(false);
+      const token = localStorage.getItem("sb_token");
+      if (token) {
+        getUser(token).then(u => {
+          setAuthUser(u || null);
+          if (!u) localStorage.removeItem("sb_token");
+          setAuthLoading(false);
+        }).catch(() => { setAuthLoading(false); });
+      } else {
+        setAuthLoading(false);
+      }
     }
   }, []);
 
