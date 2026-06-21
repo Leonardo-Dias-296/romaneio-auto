@@ -33,6 +33,24 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 100 });
     if (error) return res.status(400).json({ erro: error.message });
+
+    // Sincroniza usuários do Auth para a tabela usuarios
+    if (data.users) {
+      for (const u of data.users) {
+        const { data: existing } = await supabaseAdmin.from("usuarios").select("email").eq("email", u.email).maybeSingle();
+        if (!existing) {
+          try {
+            await supabaseAdmin.from("usuarios").insert({
+              nome: u.user_metadata?.nome || u.email.split("@")[0],
+              email: u.email,
+              role: ADMIN_EMAILS.includes(u.email) ? "admin" : "user",
+              criado_em: Date.now(),
+            });
+          } catch {}
+        }
+      }
+    }
+
     return res.status(200).json({ users: data.users || [] });
   }
 
