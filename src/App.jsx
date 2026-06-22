@@ -248,7 +248,7 @@ function RomaneioDoc({ dados, forCapture }) {
 function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
   const size = forCapture
     ? { width: 378, height: 189, fontFamily: "Arial, sans-serif" }
-    : { width: "100%", aspectRatio: "2/1", maxWidth: 378 };
+    : { width: 378, height: 189, fontFamily: "Arial, sans-serif" };
   return (
     <div style={{ ...size, background: "#fff", border: "2px solid #0F172A", borderRadius: forCapture ? 0 : 6, overflow: "hidden", display: "flex", flexDirection: "column" }}>
       <div style={{ borderBottom: "2px solid #0F172A", padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -952,7 +952,7 @@ export default function App() {
 
             {tab === "etiquetas" && (
               <div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16, marginBottom: 20 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 20, justifyContent: "center" }}>
                   {(() => {
                     const notas = dados.notas || [];
                     return notas.flatMap((nota, notaIdx) => {
