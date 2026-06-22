@@ -244,10 +244,11 @@ function RomaneioDoc({ dados, forCapture }) {
 }
 
 // ── Etiqueta ───────────────────────────────────────────────────
+// Dimensão real: 100mm x 50mm (proporção 2:1)
 function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
   const size = forCapture
-    ? { width: 340, height: 220, fontFamily: "Arial, sans-serif" }
-    : { width: "100%", aspectRatio: "10/6.5", maxWidth: 340 };
+    ? { width: 378, height: 189, fontFamily: "Arial, sans-serif" }
+    : { width: "100%", aspectRatio: "2/1", maxWidth: 378 };
   return (
     <div style={{ ...size, background: "#fff", border: "2px solid #0F172A", borderRadius: forCapture ? 0 : 6, overflow: "hidden", display: "flex", flexDirection: "column" }}>
       <div style={{ borderBottom: "2px solid #0F172A", padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
