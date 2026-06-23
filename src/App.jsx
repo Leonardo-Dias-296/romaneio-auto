@@ -68,6 +68,65 @@ async function elementToOutput(element, opts = {}) {
   pdf.addImage(dataUrl, "PNG", x, y, contentW, contentH, "", "FAST");
   return { blob: pdf.output("blob"), dataUrl };
 }
+// ── PDF de etiquetas: 1 página por etiqueta (100x50mm) ──────────
+async function generateEtiquetasPdf(labels, dados) {
+  await ensureLibs();
+  const { jsPDF } = window.jspdf;
+  const ETIQUETA_W_MM = 100;
+  const ETIQUETA_H_MM = 50;
+  const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: [ETIQUETA_W_MM, ETIQUETA_H_MM] });
+
+  const container = document.createElement("div");
+  container.style.cssText = `position:fixed;left:-9999px;top:0;z-index:-1;width:378px;font-family:Arial,sans-serif;`;
+  document.body.appendChild(container);
+
+  for (let i = 0; i < labels.length; i++) {
+    if (i > 0) pdf.addPage([ETIQUETA_W_MM, ETIQUETA_H_MM], "landscape");
+
+    container.innerHTML = "";
+    const wrapper = document.createElement("div");
+    wrapper.style.cssText = `width:378px;height:189px;background:#fff;font-family:Arial,sans-serif;`;
+
+    const l = labels[i];
+    const vol = l.volumeInNota + 1;
+    const total = l.totalVolumesNota;
+    const nf = l.nota.numero_nf || "—";
+    const data = dados.data_retirada || "—";
+    const transp = dados.transportadora || "—";
+    const produtos = l.nota.produtos || dados.produtos || "Carga geral";
+    const pedido = l.nota.numero_pedido || dados.numero_pedido || "";
+
+    wrapper.innerHTML = `
+      <div style="width:378px;height:189px;background:#fff;border:2px solid #0F172A;display:flex;flex-direction:column;overflow:hidden;">
+        <div style="border-bottom:2px solid #0F172A;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="font-weight:900;font-size:13px;color:#0F172A;">SOLLAR SUL</div><div style="font-size:9px;color:#475569;letter-spacing:1px;text-transform:uppercase;">Energia Solar</div></div>
+          <div style="border:2px solid #0F172A;border-radius:4px;padding:4px 10px;text-align:center;"><div style="font-size:7px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1px;">VOLUME</div><div style="font-weight:900;font-size:22px;color:#0F172A;line-height:1;">${vol}<span style="font-size:12px;font-weight:600;color:#475569;">/${total}</span></div></div>
+        </div>
+        <div style="flex:1;padding:8px 12px;display:flex;flex-direction:column;gap:6px;">
+          <div style="border-bottom:1px solid #E2E8F0;padding-bottom:5px;display:flex;justify-content:space-between;">
+            <div><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;">Nota Fiscal</div><div style="font-size:14px;font-weight:800;color:#0F172A;">NF-e ${nf}</div></div>
+            <div style="text-align:right;"><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;">Data</div><div style="font-size:11px;font-weight:600;color:#0F172A;">${data}</div></div>
+          </div>
+          <div><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Transportadora</div><div style="font-size:12px;font-weight:700;color:#0F172A;">${transp}</div></div>
+          <div><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">Produto(s)</div><div style="font-size:11px;font-weight:500;color:#0F172A;line-height:1.3;">${produtos}</div></div>
+          ${pedido ? `<div><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">Pedido</div><div style="font-size:11px;font-weight:500;color:#0F172A;">${pedido}</div></div>` : ""}
+        </div>
+        <div style="border-top:1px solid #CBD5E1;padding:3px 12px;display:flex;justify-content:space-between;">
+          <span style="font-size:8px;color:#94A3B8;font-weight:600;">SOLLAR SUL © ${new Date().getFullYear()}</span>
+          <span style="font-size:8px;color:#94A3B8;font-weight:600;">Manuseie com cuidado</span>
+        </div>
+      </div>`;
+    container.appendChild(wrapper);
+
+    const canvas = await window.html2canvas(wrapper, { scale: 3, useCORS: true, backgroundColor: "#ffffff", logging: false, width: 378, windowWidth: 378 });
+    const imgData = canvas.toDataURL("image/png");
+    pdf.addImage(imgData, "PNG", 0, 0, ETIQUETA_W_MM, ETIQUETA_H_MM, "", "FAST");
+  }
+
+  document.body.removeChild(container);
+  return { blob: pdf.output("blob") };
+}
+
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -98,17 +157,31 @@ function Btn({ children, onClick, busy, color = "#0F172A", textColor = "#fff" })
 }
 
 function PreviewModal({ imgDataUrl, pdfBlob, filename, onClose }) {
+  const pdfUrl = imgDataUrl ? null : URL.createObjectURL(pdfBlob);
   function handlePrint() {
     const w = window.open("", "_blank");
     if (!w) { alert("Permita pop-ups para imprimir."); return; }
-    w.document.write(`<!DOCTYPE html><html><head><style>
-      *{margin:0;padding:0;box-sizing:border-box;}body{background:#fff;}
-      img{width:100%;display:block;}
-      @media print{@page{margin:5mm;size:A4;}img{width:100%;}}
-    </style></head><body><img src="${imgDataUrl}"/>
-    <script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>
-    </body></html>`);
+    if (imgDataUrl) {
+      w.document.write(`<!DOCTYPE html><html><head><style>
+        *{margin:0;padding:0;box-sizing:border-box;}body{background:#fff;}
+        img{width:100%;display:block;}
+        @media print{@page{margin:5mm;size:A4;}img{width:100%;}}
+      </style></head><body><img src="${imgDataUrl}"/>
+      <script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>
+      </body></html>`);
+    } else {
+      w.document.write(`<!DOCTYPE html><html><head><style>
+        *{margin:0;padding:0;}body{margin:0;}
+        iframe{width:100%;height:100vh;border:none;}
+      </style></head><body><iframe src="${pdfUrl}"></iframe>
+      <script>window.onload=function(){setTimeout(function(){window.print();},500);}<\/script>
+      </body></html>`);
+    }
     w.document.close();
+  }
+  function handleClose() {
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    onClose();
   }
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 9999, display: "flex", flexDirection: "column" }}>
@@ -117,11 +190,14 @@ function PreviewModal({ imgDataUrl, pdfBlob, filename, onClose }) {
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={handlePrint} style={{ background: "#fff", color: "#0F172A", border: "none", padding: "8px 18px", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Imprimir</button>
           <button onClick={() => downloadBlob(pdfBlob, filename)} style={{ background: "#475569", color: "#fff", border: "none", padding: "8px 18px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Baixar PDF</button>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,.12)", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Fechar</button>
+          <button onClick={handleClose} style={{ background: "rgba(255,255,255,.12)", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Fechar</button>
         </div>
       </div>
       <div style={{ flex: 1, overflow: "auto", display: "flex", justifyContent: "center", padding: 24, background: "#374151" }}>
-        <img src={imgDataUrl} alt="preview" style={{ maxWidth: 794, width: "100%", boxShadow: "0 8px 32px rgba(0,0,0,.5)", alignSelf: "flex-start" }} />
+        {imgDataUrl
+          ? <img src={imgDataUrl} alt="preview" style={{ maxWidth: 794, width: "100%", boxShadow: "0 8px 32px rgba(0,0,0,.5)", alignSelf: "flex-start" }} />
+          : <iframe src={pdfUrl} style={{ width: "80%", height: "100%", border: "none", boxShadow: "0 8px 32px rgba(0,0,0,.5)" }} />
+        }
       </div>
     </div>
   );
@@ -967,8 +1043,35 @@ export default function App() {
                   {totalLabels} etiqueta{totalLabels !== 1 ? "s" : ""} — volumes numerados por NF (ex: NF1 1/3, NF2 1/1).
                 </div>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <Btn busy={busy} onClick={() => handlePreview(etiquetasRef, `etiquetas-${nfSlug}.pdf`)}>Visualizar / Imprimir Etiquetas</Btn>
-                  <Btn busy={busy} color="#334155" onClick={() => handleDownload(etiquetasRef, `etiquetas-${nfSlug}.pdf`)}>Baixar PDF das Etiquetas</Btn>
+                  <Btn busy={busy} onClick={async () => {
+                    setBusy(true);
+                    try {
+                      const labels = [];
+                      const notas = dados.notas || [];
+                      for (const nota of notas) {
+                        const vols = parseInt(nota.quantidade_volumes) || 1;
+                        for (let v = 0; v < vols; v++) labels.push({ nota, volumeInNota: v, totalVolumesNota: vols });
+                      }
+                      const { blob } = await generateEtiquetasPdf(labels, dados);
+                      const dataUrl = URL.createObjectURL(blob);
+                      setModal({ imgDataUrl: null, pdfBlob: blob, filename: `etiquetas-${nfSlug}.pdf`, pdfUrl: dataUrl });
+                    } catch (err) { alert("Erro: " + err.message); }
+                    finally { setBusy(false); }
+                  }}>Visualizar / Imprimir Etiquetas</Btn>
+                  <Btn busy={busy} color="#334155" onClick={async () => {
+                    setBusy(true);
+                    try {
+                      const labels = [];
+                      const notas = dados.notas || [];
+                      for (const nota of notas) {
+                        const vols = parseInt(nota.quantidade_volumes) || 1;
+                        for (let v = 0; v < vols; v++) labels.push({ nota, volumeInNota: v, totalVolumesNota: vols });
+                      }
+                      const { blob } = await generateEtiquetasPdf(labels, dados);
+                      downloadBlob(blob, `etiquetas-${nfSlug}.pdf`);
+                    } catch (err) { alert("Erro: " + err.message); }
+                    finally { setBusy(false); }
+                  }}>Baixar PDF das Etiquetas</Btn>
                 </div>
               </div>
             )}
