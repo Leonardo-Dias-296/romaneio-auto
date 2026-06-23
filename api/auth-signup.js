@@ -1,21 +1,38 @@
-const SUPABASE_URL = "https://budpftetbhmpghpyagcs.supabase.co";
-const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || "sb_publishable_4Is-dFQMf1SQEgizreCuiA_4fs2-TE0";
+import { SUPABASE_URL, SUPABASE_KEY, setCors, checkRateLimit } from "./lib/auth.js";
+
+export const config = { api: { bodyParser: true, sizeLimit: "1mb" } };
 
 export default async function handler(req, res) {
+  setCors(req, res);
+  if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ erro: "Method not allowed" });
+
+  const ip = req.headers["x-forwarded-for"] || "unknown";
+  if (!checkRateLimit(`signup:${ip}`, 5, 300000)) {
+    return res.status(429).json({ erro: "Muitas tentativas. Aguarde 5 minutos." });
+  }
+
   const { email, password, nome } = req.body || {};
   if (!email || !password) return res.status(400).json({ erro: "Email e senha obrigatórios" });
+  if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ erro: "Email inválido" });
+  }
+  if (typeof password !== "string" || password.length < 6 || password.length > 128) {
+    return res.status(400).json({ erro: "Senha deve ter entre 6 e 128 caracteres" });
+  }
+
+  const cleanNome = (typeof nome === "string" ? nome : "").replace(/[<>"'`;]/g, "").trim().slice(0, 100);
 
   try {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
       method: "POST",
       headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, data: { nome } }),
+      body: JSON.stringify({ email, password, data: { nome: cleanNome } }),
     });
     const data = await r.json();
-    if (!r.ok) return res.status(r.status).json({ erro: data.msg || data.error_description || data.error || "Erro ao criar conta" });
+    if (!r.ok) return res.status(400).json({ erro: "Erro ao criar conta" });
     return res.status(200).json(data);
-  } catch (e) {
-    return res.status(500).json({ erro: "Erro de conexão com Supabase: " + e.message });
+  } catch {
+    return res.status(500).json({ erro: "Erro ao conectar com servidor" });
   }
 }

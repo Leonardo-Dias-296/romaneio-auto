@@ -1,5 +1,5 @@
 // api/extrair.js — Vercel Serverless Function
-// GROQ_API_KEY (principal), GEMINI_API_KEY (fallback), OPENROUTER_API_KEY (último recurso)
+import { setCors, checkRateLimit } from "./lib/auth.js";
 
 export const config = {
   api: {
@@ -61,6 +61,8 @@ const OR_TEXT_MODELS = [
   "liquid/lfm-2.5-1.2b-instruct:free",
 ];
 
+const ALLOWED_MIMES = ["application/pdf", "image/png", "image/jpeg", "image/jpg", "text/plain", "application/xml", "text/xml"];
+
 function readRawBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -107,228 +109,123 @@ function parseMultipart(buffer, boundary) {
   return null;
 }
 
-// ── Groq (principal — super rápido) ───────────────────────────
 async function callGroq(messages, apiKey) {
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "meta-llama/llama-4-scout-17b-16e-instruct",
-      messages,
-      temperature: 0,
-      max_tokens: 1024,
-    }),
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ model: "meta-llama/llama-4-scout-17b-16e-instruct", messages, temperature: 0, max_tokens: 1024 }),
   });
-
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Groq ${res.status}: ${txt}`);
-  }
-
+  if (!res.ok) throw new Error("provider_error");
   const data = await res.json();
-  const texto = (data.choices?.[0]?.message?.content || "")
-    .replace(/```json|```/g, "")
-    .trim();
+  const texto = (data.choices?.[0]?.message?.content || "").replace(/```json|```/g, "").trim();
   return JSON.parse(texto);
 }
 
-// ── Gemini (fallback 1) ──────────────────────────────────────
 async function callGemini(parts, apiKey) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts }],
-        generationConfig: { temperature: 0, maxOutputTokens: 1024 },
-      }),
-    }
-  );
-
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Gemini ${res.status}: ${txt}`);
-  }
-
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contents: [{ role: "user", parts }], generationConfig: { temperature: 0, maxOutputTokens: 1024 } }),
+  });
+  if (!res.ok) throw new Error("provider_error");
   const data = await res.json();
-  const texto = (data.candidates?.[0]?.content?.parts?.[0]?.text || "")
-    .replace(/```json|```/g, "")
-    .trim();
+  const texto = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").replace(/```json|```/g, "").trim();
   return JSON.parse(texto);
 }
 
-// ── OpenRouter (fallback 2) ──────────────────────────────────
 async function callOpenRouter(messages, apiKey, models) {
   let lastError;
-
   for (const model of models) {
     try {
       const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-          "HTTP-Referer": "https://romaneio-auto.vercel.app",
-          "X-Title": "RomaneioAuto",
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          temperature: 0,
-          max_tokens: 1024,
-        }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}`, "HTTP-Referer": "https://romaneio-auto.vercel.app", "X-Title": "RomaneioAuto" },
+        body: JSON.stringify({ model, messages, temperature: 0, max_tokens: 1024 }),
       });
-
-      if (res.status === 429) {
-        lastError = new Error(`Rate limit ${model}`);
-        continue;
-      }
-      if (!res.ok) {
-        const txt = await res.text();
-        lastError = new Error(`${model} ${res.status}: ${txt}`);
-        continue;
-      }
-
+      if (res.status === 429) { lastError = new Error("rate_limit"); continue; }
+      if (!res.ok) { lastError = new Error("provider_error"); continue; }
       const data = await res.json();
-      const texto = (data.choices?.[0]?.message?.content || "")
-        .replace(/```json|```/g, "")
-        .trim();
+      const texto = (data.choices?.[0]?.message?.content || "").replace(/```json|```/g, "").trim();
       return JSON.parse(texto);
-    } catch (err) {
-      lastError = err;
-      continue;
-    }
+    } catch (err) { lastError = err; continue; }
   }
-  throw lastError || new Error("OpenRouter: todos os modelos falharam");
+  throw lastError || new Error("provider_error");
 }
 
-// ── Handler ────────────────────────────────────────────────────
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  setCors(req, res);
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ erro: "Método não permitido" });
+
+  const ip = req.headers["x-forwarded-for"] || "unknown";
+  if (!checkRateLimit(`extrair:${ip}`, 10, 60000)) {
+    return res.status(429).json({ erro: "Muitas requisições. Aguarde 1 minuto." });
+  }
 
   const groqKey = process.env.GROQ_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY;
   const orKey = process.env.OPENROUTER_API_KEY;
   if (!groqKey && !geminiKey && !orKey) {
-    return res.status(500).json({ erro: "Nenhuma API key configurada." });
+    return res.status(500).json({ erro: "Serviço de IA não configurado." });
   }
 
   try {
     const contentType = req.headers["content-type"] || "";
-    let geminiParts;
-    let groqMessages;
-    let orMessages;
-    let orModels;
+    let geminiParts, groqMessages, orMessages, orModels;
     let fileMimetype = "";
 
     if (contentType.includes("multipart/form-data")) {
       const boundary = parseBoundary(contentType);
-      if (!boundary) return res.status(400).json({ erro: "Boundary multipart não encontrado." });
+      if (!boundary) return res.status(400).json({ erro: "Formato inválido." });
 
       const rawBody = await readRawBody(req);
+      if (rawBody.length > 15 * 1024 * 1024) return res.status(400).json({ erro: "Arquivo muito grande (máx 15MB)." });
+
       const file = parseMultipart(rawBody, boundary);
-      if (!file) return res.status(400).json({ erro: "Campo 'arquivo' não encontrado no form." });
+      if (!file) return res.status(400).json({ erro: "Arquivo não encontrado." });
+      if (!ALLOWED_MIMES.includes(file.mimetype)) return res.status(400).json({ erro: "Tipo de arquivo não suportado." });
 
       const base64 = file.buffer.toString("base64");
       fileMimetype = file.mimetype;
 
-      groqMessages = [{
-        role: "user",
-        content: [
-          { type: "image_url", image_url: { url: `data:${file.mimetype};base64,${base64}` } },
-          { type: "text", text: PROMPT },
-        ],
-      }];
-
-      geminiParts = [
-        { inlineData: { mimeType: file.mimetype, data: base64 } },
-        { text: PROMPT },
-      ];
-
-      orMessages = [{
-        role: "user",
-        content: [
-          { type: "image_url", image_url: { url: `data:${file.mimetype};base64,${base64}` } },
-          { type: "text", text: PROMPT },
-        ],
-      }];
+      groqMessages = [{ role: "user", content: [{ type: "image_url", image_url: { url: `data:${file.mimetype};base64,${base64}` } }, { type: "text", text: PROMPT }] }];
+      geminiParts = [{ inlineData: { mimeType: file.mimetype, data: base64 } }, { text: PROMPT }];
+      orMessages = [{ role: "user", content: [{ type: "image_url", image_url: { url: `data:${file.mimetype};base64,${base64}` } }, { type: "text", text: PROMPT }] }];
       orModels = OR_VISION_MODELS;
     } else if (contentType.includes("application/json")) {
       const rawBody = await readRawBody(req);
       const { texto } = JSON.parse(rawBody.toString());
-      if (!texto) return res.status(400).json({ erro: "Campo 'texto' ausente." });
+      if (!texto || typeof texto !== "string" || texto.length > 50000) {
+        return res.status(400).json({ erro: "Texto inválido ou muito longo." });
+      }
 
       const textContent = `${PROMPT}\n\nConteúdo da NF:\n${texto}`;
-
       groqMessages = [{ role: "user", content: [{ type: "text", text: textContent }] }];
       geminiParts = [{ text: textContent }];
       orMessages = [{ role: "user", content: [{ type: "text", text: textContent }] }];
       orModels = [...OR_VISION_MODELS, ...OR_TEXT_MODELS];
     } else {
-      return res.status(400).json({ erro: "Content-Type não suportado." });
+      return res.status(400).json({ erro: "Formato não suportado." });
     }
 
-    const errors = [];
     const isPdf = fileMimetype === "application/pdf";
-
     const providers = isPdf
-      ? [["Gemini", geminiKey, () => callGemini(geminiParts, geminiKey)],
-         ["OpenRouter", orKey, () => callOpenRouter(orMessages, orKey, orModels)]]
-      : [["Groq", groqKey, () => callGroq(groqMessages, groqKey)],
-         ["Gemini", geminiKey, () => callGemini(geminiParts, geminiKey)],
-         ["OpenRouter", orKey, () => callOpenRouter(orMessages, orKey, orModels)]];
+      ? [["Gemini", geminiKey, () => callGemini(geminiParts, geminiKey)], ["OpenRouter", orKey, () => callOpenRouter(orMessages, orKey, orModels)]]
+      : [["Groq", groqKey, () => callGroq(groqMessages, groqKey)], ["Gemini", geminiKey, () => callGemini(geminiParts, geminiKey)], ["OpenRouter", orKey, () => callOpenRouter(orMessages, orKey, orModels)]];
 
-    for (const [name, key, fn] of providers) {
+    for (const [, key, fn] of providers) {
       if (!key) continue;
       try {
         const resultado = await fn();
         return res.status(200).json(resultado);
       } catch (err) {
-        console.warn(`[extrair] ${name} falhou:`, err.message);
-        errors.push(`${name}: ${err.message}`);
-      }
-    }
-    if (groqKey) {
-      try {
-        const resultado = await callGroq(groqMessages, groqKey);
-        return res.status(200).json(resultado);
-      } catch (err) {
-        console.warn("[extrair] Groq falhou:", err.message);
-        errors.push("Groq: " + err.message);
+        console.warn("[extrair] provider falhou:", err.message);
       }
     }
 
-    if (geminiKey) {
-      try {
-        const resultado = await callGemini(geminiParts, geminiKey);
-        return res.status(200).json(resultado);
-      } catch (err) {
-        console.warn("[extrair] Gemini falhou:", err.message);
-        errors.push("Gemini: " + err.message);
-      }
-    }
-
-    if (orKey) {
-      try {
-        const resultado = await callOpenRouter(orMessages, orKey, orModels);
-        return res.status(200).json(resultado);
-      } catch (err) {
-        console.warn("[extrair] OpenRouter falhou:", err.message);
-        errors.push("OpenRouter: " + err.message);
-      }
-    }
-
-    return res.status(500).json({ erro: "Todas as APIs falharam: " + errors.join(" | ") });
+    return res.status(500).json({ erro: "Serviço de IA temporariamente indisponível. Tente novamente." });
   } catch (err) {
     console.error("[extrair]", err.message);
-    return res.status(500).json({ erro: err.message });
+    return res.status(500).json({ erro: "Erro ao processar arquivo." });
   }
 }
