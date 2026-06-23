@@ -10,10 +10,10 @@ export async function signUp(email, senha, nome) {
 }
 
 export async function signIn(email, senha) {
-  const res = await fetch("/api/auth-login", {
+  const res = await fetch("/api/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password: senha }),
+    body: JSON.stringify({ email, senha }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.erro || "Email ou senha inválidos");
@@ -21,9 +21,11 @@ export async function signIn(email, senha) {
 }
 
 export async function getUser(token) {
-  const res = await fetch("/api/auth-user", {
+  const res = await fetch("/api/verificar", {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return null;
-  return res.json();
+  const data = await res.json();
+  if (!data.valido) return null;
+  return data.user;
 }

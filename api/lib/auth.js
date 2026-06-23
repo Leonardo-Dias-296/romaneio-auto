@@ -19,9 +19,14 @@ export function hashSenha(senha) {
 
 export function verificarSenha(senha, stored) {
   if (!stored || !stored.includes(":")) return false;
-  const [salt, hash] = stored.split(":");
-  const test = crypto.pbkdf2Sync(senha, salt, 100000, 64, "sha512").toString("hex");
-  return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(test, "hex"));
+  try {
+    const [salt, hash] = stored.split(":");
+    if (salt.length !== 32 || hash.length !== 128) return false;
+    const test = crypto.pbkdf2Sync(senha, salt, 100000, 64, "sha512").toString("hex");
+    return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(test, "hex"));
+  } catch {
+    return false;
+  }
 }
 
 // ── JWT ────────────────────────────────────────────────────────
@@ -52,11 +57,19 @@ export function verificarToken(token) {
   }
 }
 
-// ── Rate limiting (in-memory, por IP) ──────────────────────────
+// ── Rate limiting (sliding window, in-memory, por IP) ───────────
 const rateLimitStore = new Map();
+const RATE_LIMIT_MAX_ENTRIES = 10000;
 
 export function checkRateLimit(key, maxRequests = 10, windowMs = 60000) {
   const now = Date.now();
+
+  // Proteção contra abuso de memória — limita entries
+  if (rateLimitStore.size > RATE_LIMIT_MAX_ENTRIES) {
+    const oldest = rateLimitStore.keys().next().value;
+    rateLimitStore.delete(oldest);
+  }
+
   const entry = rateLimitStore.get(key);
   if (!entry || now - entry.start > windowMs) {
     rateLimitStore.set(key, { start: now, count: 1 });
@@ -67,15 +80,17 @@ export function checkRateLimit(key, maxRequests = 10, windowMs = 60000) {
   return true;
 }
 
-// Limpa entries antigos a cada 5 minutos
-setInterval(() => {
+// Limpa entries antigos a cada 5 minutos (setTimeout recursivo para evitar memory leak em serverless)
+function limparRateLimit() {
   const now = Date.now();
   for (const [key, entry] of rateLimitStore) {
     if (now - entry.start > 300000) rateLimitStore.delete(key);
   }
-}, 300000);
+  setTimeout(limparRateLimit, 300000);
+}
+setTimeout(limparRateLimit, 300000);
 
-// ── CORS helper ────────────────────────────────────────────────
+// ── CORS + Security headers ─────────────────────────────────────
 export function setCors(req, res) {
   const origin = req.headers.origin;
   const allowed = process.env.FRONTEND_URL || "https://romaneio-auto.vercel.app";
@@ -83,15 +98,17 @@ export function setCors(req, res) {
   res.setHeader("Access-Control-Allow-Origin", isLocal ? (origin || "*") : allowed);
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
 }
 
 // ── Supabase helpers ───────────────────────────────────────────
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+
 export async function autenticar(email, senha) {
   if (!SUPABASE_URL || !SUPABASE_KEY) return null;
-
-  if (email === process.env.ADMIN_EMAIL && senha === process.env.ADMIN_PASSWORD) {
-    return { email, nome: "Administrador", role: "admin" };
-  }
 
   try {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
@@ -102,7 +119,8 @@ export async function autenticar(email, senha) {
     if (!r.ok) return null;
     const data = await r.json();
     if (!data.access_token) return null;
-    return { email: data.user?.email || email, nome: data.user?.user_metadata?.nome || email, role: "user" };
+    const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
+    return { email: data.user?.email || email, nome: data.user?.user_metadata?.nome || email, role: isAdmin ? "admin" : "user" };
   } catch {
     return null;
   }
@@ -147,3 +165,7 @@ export async function criarUsuario(nome, email, senha) {
 }
 
 export { SUPABASE_URL, SUPABASE_KEY };
+
+export function getAdminEmails() {
+  return (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+}

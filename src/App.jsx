@@ -16,6 +16,12 @@ const REMETENTE = {
   telefone: "(51) 9 9564-8255",
 };
 
+// ── HTML sanitizer ─────────────────────────────────────────────
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 // ── PDF / Canvas helpers ───────────────────────────────────────
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -100,16 +106,16 @@ async function generateEtiquetasPdf(labels, dados) {
       <div style="width:378px;height:189px;background:#fff;border:2px solid #0F172A;display:flex;flex-direction:column;overflow:hidden;">
         <div style="border-bottom:2px solid #0F172A;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
           <div><div style="font-weight:900;font-size:13px;color:#0F172A;">SOLLAR SUL</div><div style="font-size:9px;color:#475569;letter-spacing:1px;text-transform:uppercase;">Energia Solar</div></div>
-          <div style="border:2px solid #0F172A;border-radius:4px;padding:4px 10px;text-align:center;"><div style="font-size:7px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1px;">VOLUME</div><div style="font-weight:900;font-size:22px;color:#0F172A;line-height:1;">${vol}<span style="font-size:12px;font-weight:600;color:#475569;">/${total}</span></div></div>
+          <div style="border:2px solid #0F172A;border-radius:4px;padding:4px 10px;text-align:center;"><div style="font-size:7px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1px;">VOLUME</div><div style="font-weight:900;font-size:22px;color:#0F172A;line-height:1;">${escapeHtml(String(vol))}<span style="font-size:12px;font-weight:600;color:#475569;">/${escapeHtml(String(total))}</span></div></div>
         </div>
         <div style="flex:1;padding:8px 12px;display:flex;flex-direction:column;gap:6px;">
           <div style="border-bottom:1px solid #E2E8F0;padding-bottom:5px;display:flex;justify-content:space-between;">
-            <div><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;">Nota Fiscal</div><div style="font-size:14px;font-weight:800;color:#0F172A;">NF-e ${nf}</div></div>
-            <div style="text-align:right;"><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;">Data</div><div style="font-size:11px;font-weight:600;color:#0F172A;">${data}</div></div>
+            <div><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;">Nota Fiscal</div><div style="font-size:14px;font-weight:800;color:#0F172A;">NF-e ${escapeHtml(nf)}</div></div>
+            <div style="text-align:right;"><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;">Data</div><div style="font-size:11px;font-weight:600;color:#0F172A;">${escapeHtml(data)}</div></div>
           </div>
-          <div><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Transportadora</div><div style="font-size:12px;font-weight:700;color:#0F172A;">${transp}</div></div>
-          <div><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">Produto(s)</div><div style="font-size:11px;font-weight:500;color:#0F172A;line-height:1.3;">${produtos}</div></div>
-          ${pedido ? `<div><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">Pedido</div><div style="font-size:11px;font-weight:500;color:#0F172A;">${pedido}</div></div>` : ""}
+          <div><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Transportadora</div><div style="font-size:12px;font-weight:700;color:#0F172A;">${escapeHtml(transp)}</div></div>
+          <div><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">Produto(s)</div><div style="font-size:11px;font-weight:500;color:#0F172A;line-height:1.3;">${escapeHtml(produtos)}</div></div>
+          ${pedido ? `<div><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">Pedido</div><div style="font-size:11px;font-weight:500;color:#0F172A;">${escapeHtml(pedido)}</div></div>` : ""}
         </div>
         <div style="border-top:1px solid #CBD5E1;padding:3px 12px;display:flex;justify-content:space-between;">
           <span style="font-size:8px;color:#94A3B8;font-weight:600;">SOLLAR SUL © ${new Date().getFullYear()}</span>
@@ -394,8 +400,7 @@ function EtiquetasCapture({ dados }) {
   );
 }
 
-const ADMIN_EMAILS = ["leonardoestudotrabalho2026@gmail.com"];
-const isAdm = (u) => u && (ADMIN_EMAILS.includes(u.email) || u.app_metadata?.role === "admin");
+const isAdm = (u) => u && u.role === "admin";
 
 // ── Main App ───────────────────────────────────────────────────
 export default function App() {
@@ -418,6 +423,7 @@ export default function App() {
   const [loginErro, setLoginErro] = useState("");
   const [loginSucesso, setLoginSucesso] = useState("");
   const [loginBusy, setLoginBusy] = useState(false);
+  const [showSenha, setShowSenha] = useState(false);
   const [adminUsers, setAdminUsers] = useState([]);
   const [adminBusy, setAdminBusy] = useState(false);
   const [adminMsg, setAdminMsg] = useState("");
@@ -430,30 +436,17 @@ export default function App() {
 
   useEffect(() => { if (step === 3) ensureLibs().catch(() => {}); }, [step]);
 
-  // Verifica sessão via localStorage + API — inclui tratamento de confirmação de email
+  // Verifica sessão via JWT no localStorage
   useEffect(() => {
-    const hash = window.location.hash;
-    const params = new URLSearchParams(hash.replace(/^#/, ""));
-    const accessToken = params.get("access_token");
-
-    if (accessToken) {
-      localStorage.setItem("sb_token", accessToken);
-      window.history.replaceState(null, "", window.location.pathname);
-      getUser(accessToken).then(u => {
+    const token = localStorage.getItem("sb_token");
+    if (token) {
+      getUser(token).then(u => {
         setAuthUser(u || null);
+        if (!u) localStorage.removeItem("sb_token");
         setAuthLoading(false);
-      }).catch(() => { setAuthLoading(false); });
+      }).catch(() => { localStorage.removeItem("sb_token"); setAuthLoading(false); });
     } else {
-      const token = localStorage.getItem("sb_token");
-      if (token) {
-        getUser(token).then(u => {
-          setAuthUser(u || null);
-          if (!u) localStorage.removeItem("sb_token");
-          setAuthLoading(false);
-        }).catch(() => { setAuthLoading(false); });
-      } else {
-        setAuthLoading(false);
-      }
+      setAuthLoading(false);
     }
   }, []);
 
@@ -717,8 +710,8 @@ export default function App() {
     setLoginErro(""); setLoginSucesso(""); setLoginBusy(true);
     try {
       const data = await signIn(loginEmail, loginSenha);
-      if (data.access_token) localStorage.setItem("sb_token", data.access_token);
-      setAuthUser(data.user || { email: loginEmail });
+      if (data.token) localStorage.setItem("sb_token", data.token);
+      setAuthUser(data.user || { email: loginEmail, role: "user" });
       setLoginEmail(""); setLoginSenha("");
     } catch (e) { setLoginErro(e.message || "Email ou senha inválidos."); }
     finally { setLoginBusy(false); }
@@ -830,9 +823,15 @@ export default function App() {
               </div>
               <div>
                 <span style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.8px" }}>Senha</span>
-                <input type="password" value={loginSenha} onChange={e => setLoginSenha(e.target.value)} placeholder="Sua senha"
-                  style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "9px 12px", fontSize: 14, fontFamily: "inherit", outline: "none", marginTop: 4, boxSizing: "border-box" }}
-                  onKeyDown={e => e.key === "Enter" && (modoCadastro ? handleCadastro() : handleLogin())} />
+                <div style={{ position: "relative", marginTop: 4 }}>
+                  <input type={showSenha ? "text" : "password"} value={loginSenha} onChange={e => setLoginSenha(e.target.value)} placeholder="Sua senha"
+                    style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "9px 36px 9px 12px", fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                    onKeyDown={e => e.key === "Enter" && (modoCadastro ? handleCadastro() : handleLogin())} />
+                  <button type="button" onClick={() => setShowSenha(!showSenha)}
+                    style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "#94A3B8", fontSize: 11, fontWeight: 700, fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    {showSenha ? "OCULTAR" : "VER"}
+                  </button>
+                </div>
               </div>
               {loginErro && <div style={{ color: "#EF4444", fontSize: 12, fontWeight: 600, textAlign: "center" }}>{loginErro}</div>}
               {loginSucesso && <div style={{ color: "#16A34A", fontSize: 12, fontWeight: 600, textAlign: "center" }}>{loginSucesso}</div>}

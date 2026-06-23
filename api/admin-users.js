@@ -1,6 +1,4 @@
-import { verificarToken, SUPABASE_URL, SUPABASE_KEY, setCors, checkRateLimit } from "./lib/auth.js";
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim()).filter(Boolean);
+import { verificarToken, SUPABASE_URL, SUPABASE_KEY, setCors, checkRateLimit, getAdminEmails } from "./lib/auth.js";
 
 export const config = { api: { bodyParser: true, sizeLimit: "1mb" } };
 
@@ -16,7 +14,8 @@ export default async function handler(req, res) {
 
   const auth = req.headers.authorization?.replace("Bearer ", "");
   const payload = verificarToken(auth || "");
-  if (!payload || !ADMIN_EMAILS.includes(payload.email)) {
+  const ADMIN_EMAILS = getAdminEmails();
+  if (!payload || !ADMIN_EMAILS.includes(payload.email?.toLowerCase())) {
     return res.status(401).json({ erro: "Não autorizado." });
   }
 

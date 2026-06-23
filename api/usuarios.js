@@ -1,4 +1,4 @@
-import { verificarToken, listarUsuarios, criarUsuario, setCors, checkRateLimit } from "./lib/auth.js";
+import { verificarToken, listarUsuarios, criarUsuario, setCors, checkRateLimit, getAdminEmails } from "./lib/auth.js";
 
 export const config = { api: { bodyParser: true, sizeLimit: "1mb" } };
 
@@ -8,7 +8,8 @@ export default async function handler(req, res) {
 
   const auth = req.headers.authorization?.replace("Bearer ", "");
   const payload = verificarToken(auth || "");
-  if (!payload || payload.role !== "admin") {
+  const ADMIN_EMAILS = getAdminEmails();
+  if (!payload || (!ADMIN_EMAILS.includes(payload.email?.toLowerCase()) && payload.role !== "admin")) {
     return res.status(401).json({ erro: "Não autorizado." });
   }
 
