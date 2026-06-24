@@ -147,7 +147,7 @@ function Field({ label, value, onChange }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <span style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.8px" }}>{label}</span>
       <input value={value || ""} onChange={e => onChange(e.target.value)}
-        style={{ border: "1px solid #CBD5E1", borderRadius: 6, padding: "9px 12px", fontSize: 14, fontWeight: 500, color: "#0F172A", background: "#fff", fontFamily: "inherit", outline: "none", width: "100%" }}
+        style={{ border: "1px solid #CBD5E1", borderRadius: 6, padding: "9px 12px", fontSize: 14, fontWeight: 500, color: "#0F172A", background: "#fff", fontFamily: "inherit", outline: "none", width: "100%", boxSizing: "border-box" }}
         onFocus={e => e.target.style.borderColor = "#94A3B8"}
         onBlur={e => e.target.style.borderColor = "#CBD5E1"} />
     </div>
