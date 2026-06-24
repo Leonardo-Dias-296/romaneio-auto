@@ -25,8 +25,7 @@ const PROMPT = `Você é um extrator de dados de notas fiscais brasileiras. Anal
   "numero_nf": "número da nota fiscal (apenas números)",
   "numero_pedido": "número do pedido",
   "produtos": "descrição dos produtos",
-  "quantidade_volumes": "quantidade total de volumes (número)",
-  "observacoes": "observações relevantes"
+  "quantidade_volumes": "quantidade total de volumes (número)"
 }
 
 Responda APENAS com JSON válido, sem markdown, sem blocos de código, sem qualquer texto adicional.
