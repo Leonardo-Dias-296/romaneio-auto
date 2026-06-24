@@ -447,6 +447,9 @@ export default function App() {
   const [adminUsers, setAdminUsers] = useState([]);
   const [adminBusy, setAdminBusy] = useState(false);
   const [adminMsg, setAdminMsg] = useState("");
+  const [blingNumero, setBlingNumero] = useState("");
+  const [blingBusy, setBlingBusy] = useState(false);
+  const [blingConnected, setBlingConnected] = useState(false);
   const [adminNovoEmail, setAdminNovoEmail] = useState("");
   const [adminNovoNome, setAdminNovoNome] = useState("");
   const [adminNovaSenha, setAdminNovaSenha] = useState("");
@@ -468,6 +471,23 @@ export default function App() {
     } else {
       setAuthLoading(false);
     }
+  }, []);
+
+  // Verifica status do Bling (após callback OAuth)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const blingStatus = params.get("bling");
+    if (blingStatus === "success") {
+      setBlingConnected(true);
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (blingStatus === "error") {
+      alert("Erro ao conectar com Bling: " + (params.get("msg") || "desconhecido"));
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    // Check if Bling is connected
+    fetch("/api/bling-nota", { method: "POST", headers: { "Content-Type": "application/json" }, body: '{}' })
+      .then(r => { if (r.ok) setBlingConnected(true); })
+      .catch(() => {});
   }, []);
 
   // helper: current page size in mm
@@ -705,6 +725,55 @@ export default function App() {
     } catch (err) { alert("Erro:\n" + err.message); setStep(1); }
   }
 
+  // ── Busca NF pelo número via API do Bling ────────────────────
+  async function buscarNFBling() {
+    if (!blingNumero.trim()) return;
+    setBlingBusy(true);
+    try {
+      const res = await fetch("/api/bling-nota", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ numero: blingNumero.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.erro || "Erro ao buscar NF");
+
+      // Preenche dados gerais
+      const shared = {};
+      const campoPrefixo = ["transportadora", "cnpj_transp", "endereco_transp", "cidade_transp", "uf_transp", "telefone_transp", "nome_motorista", "cpf_motorista", "placa_veiculo", "data_retirada", "horario_retirada"];
+      for (const chave of campoPrefixo) {
+        if (data[chave]) shared[chave] = data[chave];
+      }
+
+      const nota = {
+        numero_nf: data.numero_nf || "",
+        produtos: data.produtos || "",
+        quantidade_volumes: data.quantidade_volumes || "",
+        numero_pedido: data.numero_pedido || "",
+        observacoes: data.observacoes || "",
+      };
+
+      // Preenche data atual se vazia
+      if (!shared.data_retirada) shared.data_retirada = new Date().toLocaleDateString("pt-BR");
+
+      // Verifica se já tem NFs no dados atual e adiciona
+      setDados(prev => {
+        const notasExistentes = prev.notas || [];
+        // Merge dados gerais (preenche só os vazios)
+        const merged = { ...shared };
+        for (const chave of campoPrefixo) {
+          if (!merged[chave] && prev[chave]) merged[chave] = prev[chave];
+        }
+        return { ...prev, ...merged, notas: [...notasExistentes, nota] };
+      });
+      setBlingNumero("");
+    } catch (err) {
+      alert("Erro ao buscar NF: " + err.message);
+    } finally {
+      setBlingBusy(false);
+    }
+  }
+
   function upd(key, val) { setDados(prev => ({ ...prev, [key]: val })); }
   function updNota(idx, key, val) {
     setDados(prev => {
@@ -926,6 +995,31 @@ export default function App() {
               </div>
               <div style={{ background: "#0F172A", color: "#fff", display: "inline-block", padding: "12px 28px", borderRadius: 8, fontSize: 14, fontWeight: 700 }}>Selecionar Arquivo</div>
               <input ref={fileRef} type="file" accept=".pdf,.png,.jpg,.jpeg,.txt,.xml" multiple style={{ display: "none" }} onChange={e => { const f = Array.from(e.target.files || []); if (f.length) processarArquivos(f); }} />
+            </div>
+            <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 280, background: "#fff", border: "1px solid #E2E8F0", borderRadius: 10, padding: 18 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Buscar NF pelo Bling</div>
+                <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 4 }}>Número da NF</div>
+                    <input value={blingNumero} onChange={e => setBlingNumero(e.target.value)}
+                      placeholder="Ex: 723"
+                      onKeyDown={e => e.key === "Enter" && buscarNFBling()}
+                      style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "9px 12px", fontSize: 14, fontWeight: 500, color: "#0F172A", background: "#fff", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                  </div>
+                  <button onClick={buscarNFBling} disabled={blingBusy || !blingNumero.trim()}
+                    style={{ background: blingBusy ? "#94A3B8" : "#16A34A", color: "#fff", border: "none", padding: "10px 18px", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: blingBusy ? "not-allowed" : "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                    {blingBusy ? "Buscando..." : "Buscar"}
+                  </button>
+                </div>
+                <div style={{ marginTop: 10 }}>
+                  {blingConnected ? (
+                    <span style={{ fontSize: 11, color: "#16A34A", fontWeight: 700 }}>✓ Bling conectado</span>
+                  ) : (
+                    <a href="/api/bling-auth" style={{ fontSize: 11, color: "#2563EB", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Conectar Bling</a>
+                  )}
+                </div>
+              </div>
             </div>
             <div style={{ marginTop: 20, background: "#fff", border: "1px solid #E2E8F0", borderRadius: 10, padding: 18 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Remetente pré-configurado</div>
