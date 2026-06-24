@@ -271,6 +271,7 @@ function RomaneioDoc({ dados, forCapture }) {
           <Section title="Informações da Retirada" />
           <Row label="Data:" value={dados.data_retirada} />
           <Row label="Horário:" value={dados.horario_retirada} />
+          <Row label="Observações:" value={dados.observacoes} />
           {isMulti ? (
             <>
               <Section title={`Notas Fiscais (${notas.length}) — Total de Volumes: ${totalVolumes}`} />
@@ -990,6 +991,7 @@ export default function App() {
                       <Field label="Data" value={dados.data_retirada} onChange={v => upd("data_retirada", v)} />
                       <Field label="Horário" value={dados.horario_retirada} onChange={v => upd("horario_retirada", v)} />
                     </div>
+                    <Field label="Observações" value={dados.observacoes} onChange={v => upd("observacoes", v)} />
 
                     <div style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, paddingTop: 8, borderTop: "1px solid #E2E8F0" }}>
                       Notas Fiscais ({(dados.notas || []).length})
