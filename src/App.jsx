@@ -54,7 +54,7 @@ async function elementToOutput(element, opts = {}) {
 
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
-  const margin = 10; // mm
+  const margin = 5; // mm
   // largura disponível para o conteúdo
   let contentW = pageW - margin * 2;
   // converte proporção do canvas para altura em mm
@@ -172,9 +172,9 @@ function PreviewModal({ imgDataUrl, pdfBlob, filename, onClose }) {
         *{margin:0;padding:0;box-sizing:border-box;}body{background:#fff;}
         img{display:block;width:100%;height:auto;}
         @media print{
-          @page{margin:5mm;size:A4;}
+          @page{margin:3mm;size:A4;}
           html,body{height:100%;overflow:hidden;}
-          img{width:100%!important;height:auto!important;max-height:257mm;object-fit:contain;}
+          img{width:100%!important;height:100%!important;object-fit:fill;}
         }
       </style></head><body><img src="${imgDataUrl}"/>
       <script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>
@@ -339,8 +339,8 @@ function RomaneioDoc({ dados, forCapture }) {
   }
 
   return (
-    <div ref={wrapRef} style={{ width: "100%", maxWidth: 794, height: 1123, background: "#fff", fontFamily: "Arial, sans-serif", padding: "16px 20px", boxSizing: "border-box", overflow: "hidden", position: "relative" }}>
-      <div ref={innerRef} style={{ transformOrigin: "top left", transform: `scale(${scale})`, width: 754 }}>
+    <div ref={wrapRef} style={{ width: 794, height: 1123, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box", overflow: "hidden", position: "relative" }}>
+      <div ref={innerRef} style={{ transformOrigin: "top left", transform: `scale(${scale})`, width: 794, height: 1123 }}>
         {inner}
       </div>
     </div>
