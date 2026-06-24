@@ -214,7 +214,7 @@ function PreviewModal({ imgDataUrl, pdfBlob, filename, onClose }) {
 }
 
 // ── Romaneio Document ──────────────────────────────────────────
-function RomaneioDoc({ dados, forCapture }) {
+function RomaneioDoc({ dados, forCapture, userEmail }) {
   const notas = dados.notas || [];
   const isMulti = notas.length > 1;
   const totalVolumes = notas.reduce((s, n) => s + (parseInt(n.quantidade_volumes) || 1), 0);
@@ -324,8 +324,9 @@ function RomaneioDoc({ dados, forCapture }) {
           </tr>
         </tbody>
       </table>
-      <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontSize: 10, color: "#1E293B", fontWeight: 600 }}>
+      <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontSize: 10, color: "#1E293B", fontWeight: 600, flexWrap: "wrap", gap: 4 }}>
         <span>SOLLARSUL ENERGIA SOLAR LTDA — Taquari/RS</span>
+        {userEmail && <span>Gerado por: {userEmail}</span>}
         <span>Gerado em: {new Date().toLocaleString("pt-BR")}</span>
       </div>
     </div>
@@ -806,7 +807,7 @@ export default function App() {
         return (
           <>
             <div ref={romaneioRef} style={{ position: "absolute", left: -9999, top: 0, zIndex: -1, width: cssWidth }}>
-              <RomaneioDoc dados={dados} forCapture />
+              <RomaneioDoc dados={dados} forCapture userEmail={authUser?.email} />
             </div>
             <div ref={etiquetasRef} style={{ position: "absolute", left: -9999, top: 0, zIndex: -1, width: cssWidth }}>
               <EtiquetasCapture dados={dados} />
@@ -1015,7 +1016,7 @@ export default function App() {
                     </button>
                   </div>
                 </div>
-                <RomaneioDoc dados={dados} />
+                <RomaneioDoc dados={dados} userEmail={authUser?.email} />
                 <div style={{ gridColumn: "1/-1", display: "flex", gap: 12, flexWrap: "wrap" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ fontSize: 12, color: "#64748B", fontWeight: 700 }}>Tamanho da página:</div>
