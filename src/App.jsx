@@ -994,15 +994,17 @@ export default function App() {
                       Notas Fiscais ({(dados.notas || []).length})
                     </div>
                     {(dados.notas || []).map((nota, idx) => (
-                      <div key={idx} style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, padding: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, position: "relative" }}>
+                      <div key={idx} style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, padding: 14, display: "flex", flexDirection: "column", gap: 10, position: "relative" }}>
                         {(dados.notas || []).length > 1 && (
-                          <div style={{ gridColumn: "1/-1", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <span style={{ fontSize: 11, fontWeight: 700, color: "#0F172A" }}>NF #{idx + 1}</span>
                             <button onClick={() => removeNota(idx)} style={{ background: "none", border: "none", color: "#EF4444", cursor: "pointer", fontSize: 18, fontWeight: 700, padding: 0, lineHeight: 1 }}>×</button>
                           </div>
                         )}
-                        <Field label="N. da NF" value={nota.numero_nf} onChange={v => updNota(idx, "numero_nf", v)} />
-                        <Field label="Pedido" value={nota.numero_pedido} onChange={v => updNota(idx, "numero_pedido", v)} />
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                          <Field label="N. da NF" value={nota.numero_nf} onChange={v => updNota(idx, "numero_nf", v)} />
+                          <Field label="Pedido" value={nota.numero_pedido} onChange={v => updNota(idx, "numero_pedido", v)} />
+                        </div>
                         <Field label="Produto(s)" value={nota.produtos} onChange={v => updNota(idx, "produtos", v)} />
                         <Field label="Qtd de Volumes" value={nota.quantidade_volumes} onChange={v => updNota(idx, "quantidade_volumes", v)} />
                       </div>
