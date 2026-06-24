@@ -13,7 +13,7 @@ export function getBlingClientSecret() {
 
 export function getBlingRedirectUri(req) {
   const origin = req.headers.origin || req.headers.referer || "https://romaneio-auto.vercel.app";
-  return `${origin.replace(/\/$/, "")}/api/bling-callback`;
+  return `${origin.replace(/\/$/, "")}/api/bling?action=callback`;
 }
 
 // ── Token storage via Supabase ─────────────────────────────────

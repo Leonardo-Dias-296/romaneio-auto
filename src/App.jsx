@@ -485,8 +485,9 @@ export default function App() {
       window.history.replaceState({}, "", window.location.pathname);
     }
     // Check if Bling is connected
-    fetch("/api/bling-nota", { method: "POST", headers: { "Content-Type": "application/json" }, body: '{}' })
-      .then(r => { if (r.ok) setBlingConnected(true); })
+    fetch("/api/bling?action=status")
+      .then(r => r.json())
+      .then(d => { if (d.connected) setBlingConnected(true); })
       .catch(() => {});
   }, []);
 
@@ -730,7 +731,7 @@ export default function App() {
     if (!blingNumero.trim()) return;
     setBlingBusy(true);
     try {
-      const res = await fetch("/api/bling-nota", {
+      const res = await fetch("/api/bling", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ numero: blingNumero.trim() }),
@@ -1016,7 +1017,7 @@ export default function App() {
                   {blingConnected ? (
                     <span style={{ fontSize: 11, color: "#16A34A", fontWeight: 700 }}>✓ Bling conectado</span>
                   ) : (
-                    <a href="/api/bling-auth" style={{ fontSize: 11, color: "#2563EB", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Conectar Bling</a>
+                    <a href="/api/bling?action=auth" style={{ fontSize: 11, color: "#2563EB", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Conectar Bling</a>
                   )}
                 </div>
               </div>
