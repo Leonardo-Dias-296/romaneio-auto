@@ -10,10 +10,10 @@ const MAX_RETRIES = 3;
 const FIELDS_PER_NF = ["numero_nf", "produtos", "quantidade_volumes", "numero_pedido", "observacoes"];
 
 const REMETENTE = {
-  razao_social: "SOLLARSUL ENERGIA SOLAR LTDA",
+  razao_social: "FRICLIM",
   cnpj: "42.366.377/0001-48",
   endereco: "ROD ALEIXO ROCHA DA SILVA, Nº 1320, PINHEIROS - TAQUARI/RS - CEP 95.860-000",
-  telefone: "(51) 9 9564-8255",
+  telefone: "(51) 2666-0223",
 };
 
 // ── HTML sanitizer ─────────────────────────────────────────────
@@ -243,10 +243,8 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
         <div style={{ minWidth: 0, flex: 1, display: "flex", gap: 12, alignItems: "center" }}>
           <img src="/image.png" alt="Logo" style={{ height: forCapture ? 80 : 110, objectFit: "contain", flexShrink: 0 }} />
           <div>
-            <div style={{ fontSize: forCapture ? 16 : 17, fontWeight: 900, color: "#000" }}>SOLLARSUL ENERGIA SOLAR LTDA</div>
-            <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 2 }}>CNPJ: {REMETENTE.cnpj}</div>
-            <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 1 }}>{REMETENTE.endereco}</div>
-            <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 1 }}>Tel: {REMETENTE.telefone}</div>
+            <div style={{ fontSize: forCapture ? 16 : 17, fontWeight: 900, color: "#000" }}>FRICLIM CONTATO: {REMETENTE.telefone}</div>
+            <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 2 }}>GRUPO SOLLAR SUL+</div>
           </div>
         </div>
         <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -325,7 +323,7 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
         </tbody>
       </table>
       <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontSize: 10, color: "#1E293B", fontWeight: 600, flexWrap: "wrap", gap: 4 }}>
-        <span>SOLLARSUL ENERGIA SOLAR LTDA — Taquari/RS</span>
+        <span>FRICLIM — Taquari/RS</span>
         {userEmail && <span>Gerado por: {userEmail}</span>}
         <span>Gerado em: {new Date().toLocaleString("pt-BR")}</span>
       </div>
@@ -352,48 +350,48 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
     ? { width: 378, height: 189, fontFamily: "Arial, sans-serif" }
     : { width: 378, height: 189, fontFamily: "Arial, sans-serif" };
   return (
-    <div style={{ ...size, background: "#fff", border: "2px solid #0F172A", borderRadius: forCapture ? 0 : 6, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-      <div style={{ borderBottom: "2px solid #0F172A", padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div style={{ ...size, background: "#fff", border: "2px solid #000", borderRadius: forCapture ? 0 : 6, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      <div style={{ borderBottom: "2px solid #000", padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ fontWeight: 900, fontSize: 13, color: "#0F172A" }}>SOLLAR SUL</div>
-          <div style={{ fontSize: 9, color: "#475569", letterSpacing: 1, textTransform: "uppercase" }}>Energia Solar</div>
+          <div style={{ fontWeight: 900, fontSize: 15, color: "#000" }}>SOLLAR SUL</div>
+          <div style={{ fontSize: 10, color: "#000", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Energia Solar</div>
         </div>
-        <div style={{ border: "2px solid #0F172A", borderRadius: 4, padding: "4px 10px", textAlign: "center" }}>
-          <div style={{ fontSize: 7, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: 1 }}>VOLUME</div>
-          <div style={{ fontWeight: 900, fontSize: 22, color: "#0F172A", lineHeight: 1 }}>
-            {volumeInNota + 1}<span style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>/{totalVolumesNota}</span>
+        <div style={{ border: "2px solid #000", borderRadius: 4, padding: "4px 10px", textAlign: "center" }}>
+          <div style={{ fontSize: 8, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1 }}>VOLUME</div>
+          <div style={{ fontWeight: 900, fontSize: 24, color: "#000", lineHeight: 1 }}>
+            {volumeInNota + 1}<span style={{ fontSize: 13, fontWeight: 700, color: "#000" }}>/{totalVolumesNota}</span>
           </div>
         </div>
       </div>
       <div style={{ flex: 1, padding: "8px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-        <div style={{ borderBottom: "1px solid #E2E8F0", paddingBottom: 5, display: "flex", justifyContent: "space-between" }}>
+        <div style={{ borderBottom: "1px solid #CBD5E1", paddingBottom: 5, display: "flex", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontSize: 8, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1 }}>Nota Fiscal</div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: "#0F172A" }}>NF-e {nota.numero_nf || "—"}</div>
+            <div style={{ fontSize: 9, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1 }}>Nota Fiscal</div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: "#000" }}>NF-e {nota.numero_nf || "—"}</div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 8, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1 }}>Data</div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "#0F172A" }}>{dados.data_retirada || "—"}</div>
+            <div style={{ fontSize: 9, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1 }}>Data</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#000" }}>{dados.data_retirada || "—"}</div>
           </div>
         </div>
         <div>
-          <div style={{ fontSize: 8, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>Transportadora</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#0F172A" }}>{dados.transportadora || "—"}</div>
+          <div style={{ fontSize: 9, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>Transportadora</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: "#000" }}>{dados.transportadora || "—"}</div>
         </div>
         <div>
-          <div style={{ fontSize: 8, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, marginBottom: 1 }}>Produto(s)</div>
-          <div style={{ fontSize: 11, fontWeight: 500, color: "#0F172A", lineHeight: 1.3 }}>{nota.produtos || "Carga geral"}</div>
+          <div style={{ fontSize: 9, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1, marginBottom: 1 }}>Produto(s)</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#000", lineHeight: 1.3 }}>{nota.produtos || "Carga geral"}</div>
         </div>
         {nota.numero_pedido && (
           <div>
-            <div style={{ fontSize: 8, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, marginBottom: 1 }}>Pedido</div>
-            <div style={{ fontSize: 11, fontWeight: 500, color: "#0F172A" }}>{nota.numero_pedido}</div>
+            <div style={{ fontSize: 9, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1, marginBottom: 1 }}>Pedido</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#000" }}>{nota.numero_pedido}</div>
           </div>
         )}
       </div>
       <div style={{ borderTop: "1px solid #CBD5E1", padding: "3px 12px", display: "flex", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 8, color: "#94A3B8", fontWeight: 600 }}>SOLLAR SUL © {new Date().getFullYear()}</span>
-        <span style={{ fontSize: 8, color: "#94A3B8", fontWeight: 600 }}>Manuseie com cuidado</span>
+        <span style={{ fontSize: 8, color: "#000", fontWeight: 700 }}>SOLLAR SUL © {new Date().getFullYear()}</span>
+        <span style={{ fontSize: 8, color: "#000", fontWeight: 700 }}>Manuseie com cuidado</span>
       </div>
     </div>
   );
