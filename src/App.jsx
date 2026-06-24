@@ -170,8 +170,12 @@ function PreviewModal({ imgDataUrl, pdfBlob, filename, onClose }) {
     if (imgDataUrl) {
       w.document.write(`<!DOCTYPE html><html><head><style>
         *{margin:0;padding:0;box-sizing:border-box;}body{background:#fff;}
-        img{width:100%;display:block;}
-        @media print{@page{margin:5mm;size:A4;}img{width:100%;}}
+        img{display:block;width:100%;height:auto;}
+        @media print{
+          @page{margin:5mm;size:A4;}
+          html,body{height:100%;overflow:hidden;}
+          img{width:100%!important;height:auto!important;max-height:257mm;object-fit:contain;}
+        }
       </style></head><body><img src="${imgDataUrl}"/>
       <script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>
       </body></html>`);
@@ -218,9 +222,9 @@ function RomaneioDoc({ dados, forCapture }) {
     ? { width: "100%", maxWidth: 794, minHeight: 1123, background: "#fff", fontFamily: "Arial, sans-serif", padding: "20px 24px", boxSizing: "border-box", overflow: "hidden", display: "flex", flexDirection: "column" }
     : { background: "#fff", border: "1px solid #CBD5E1", borderRadius: 10, overflow: "hidden" };
 
-  const thStyle = { background: "#0F172A", color: "#fff", fontWeight: 700, fontSize: 10, padding: "5px 10px", textTransform: "uppercase", letterSpacing: "1.5px", textAlign: "left" };
-  const labelStyle = { width: "34%", padding: "5px 10px", fontWeight: 700, fontSize: 11, color: "#0F172A", background: "#F8FAFC", borderRight: "1px solid #CBD5E1", borderBottom: "1px solid #E2E8F0", whiteSpace: "nowrap" };
-  const valueStyle = { padding: "5px 10px", fontSize: 11, color: "#0F172A", borderBottom: "1px solid #E2E8F0", fontWeight: 400, wordBreak: "break-word" };
+  const thStyle = { background: "#0F172A", color: "#fff", fontWeight: 700, fontSize: 9, padding: "4px 8px", textTransform: "uppercase", letterSpacing: "1.5px", textAlign: "left" };
+  const labelStyle = { width: "34%", padding: "4px 8px", fontWeight: 700, fontSize: 10, color: "#0F172A", background: "#F8FAFC", borderRight: "1px solid #CBD5E1", borderBottom: "1px solid #E2E8F0", whiteSpace: "nowrap" };
+  const valueStyle = { padding: "4px 8px", fontSize: 10, color: "#0F172A", borderBottom: "1px solid #E2E8F0", fontWeight: 400, wordBreak: "break-word" };
 
   const Section = ({ title }) => <tr><td colSpan={2} style={thStyle}>{title}</td></tr>;
   const Row = ({ label, value }) => <tr><td style={labelStyle}>{label}</td><td style={valueStyle}>{value || "\u00A0"}</td></tr>;
@@ -230,9 +234,9 @@ function RomaneioDoc({ dados, forCapture }) {
 
   return (
     <div style={style}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, paddingBottom: 10, borderBottom: "2px solid #0F172A", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ minWidth: 0, flex: 1, display: "flex", gap: 12, alignItems: "center" }}>
-          <img src="/image.png" alt="Logo" style={{ height: forCapture ? 100 : 110, objectFit: "contain", flexShrink: 0 }} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, paddingBottom: 8, borderBottom: "2px solid #0F172A", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ minWidth: 0, flex: 1, display: "flex", gap: 10, alignItems: "center" }}>
+          <img src="/image.png" alt="Logo" style={{ height: forCapture ? 70 : 110, objectFit: "contain", flexShrink: 0 }} />
           <div>
             <div style={{ fontSize: forCapture ? 14 : 17, fontWeight: 900, color: "#0F172A" }}>SOLLARSUL ENERGIA SOLAR LTDA</div>
             <div style={{ fontSize: forCapture ? 10 : 12, color: "#475569", marginTop: 2 }}>CNPJ: {REMETENTE.cnpj}</div>
@@ -270,11 +274,10 @@ function RomaneioDoc({ dados, forCapture }) {
                   <thead>
                     <tr>
                       <th style={{ ...thStyle, width: "6%" }}>#</th>
-                      <th style={{ ...thStyle, width: "18%" }}>NF-e</th>
-                      <th style={{ ...thStyle, width: "36%" }}>Produto(s)</th>
+                      <th style={{ ...thStyle, width: "20%" }}>NF-e</th>
+                      <th style={{ ...thStyle, width: "40%" }}>Produto(s)</th>
                       <th style={{ ...thStyle, width: "14%" }}>Volumes</th>
-                      <th style={{ ...thStyle, width: "14%" }}>Pedido</th>
-                      <th style={{ ...thStyle, width: "12%" }}>Obs</th>
+                      <th style={{ ...thStyle, width: "20%" }}>Pedido</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -285,7 +288,6 @@ function RomaneioDoc({ dados, forCapture }) {
                         <td style={{ ...valueStyle, lineHeight: 1.3 }}>{n.produtos || "—"}</td>
                         <td style={{ ...valueStyle, textAlign: "center" }}>{n.quantidade_volumes || "1"}</td>
                         <td style={{ ...valueStyle }}>{n.numero_pedido || "—"}</td>
-                        <td style={{ ...valueStyle, fontSize: 10 }}>{n.observacoes || "—"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -299,17 +301,16 @@ function RomaneioDoc({ dados, forCapture }) {
               <Section title="Descrição da Mercadoria" />
               <Row label="Produto(s):" value={notas[0]?.produtos} />
               <Row label="Quantidade de Volumes:" value={notas[0]?.quantidade_volumes} />
-              <Row label="Observações:" value={notas[0]?.observacoes} />
             </>
           )}
           <tr><td colSpan={2} style={thStyle}>Assinaturas</td></tr>
           <tr>
             <td colSpan={2} style={{ padding: 0, height: "100%" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: forCapture ? 120 : 80 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", height: forCapture ? 100 : 80 }}>
                 {["Assinatura do Motorista", "Assinatura do Responsável do CD"].map((label, i) => (
-                  <div key={i} style={{ padding: forCapture ? "20px 16px 80px" : "14px 16px 60px", position: "relative", borderRight: i === 0 ? "1px solid #CBD5E1" : "none", display: "flex", alignItems: "flex-end" }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: .5 }}>{label}</span>
-                    <div style={{ position: "absolute", bottom: 22, left: 16, right: 16, height: 1, background: "#94A3B8" }} />
+                  <div key={i} style={{ padding: forCapture ? "12px 16px 60px" : "14px 16px 60px", position: "relative", borderRight: i === 0 ? "1px solid #CBD5E1" : "none", display: "flex", alignItems: "flex-end" }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: .5 }}>{label}</span>
+                    <div style={{ position: "absolute", bottom: 18, left: 16, right: 16, height: 1, background: "#94A3B8" }} />
                   </div>
                 ))}
               </div>
@@ -317,7 +318,7 @@ function RomaneioDoc({ dados, forCapture }) {
           </tr>
         </tbody>
       </table>
-      <div style={{ marginTop: 10, display: "flex", justifyContent: "space-between", fontSize: 10, color: "#94A3B8" }}>
+      <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontSize: 9, color: "#94A3B8" }}>
         <span>SOLLARSUL ENERGIA SOLAR LTDA — Taquari/RS</span>
         <span>Gerado em: {new Date().toLocaleString("pt-BR")}</span>
       </div>
