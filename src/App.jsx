@@ -280,11 +280,10 @@ function RomaneioDoc({ dados, forCapture }) {
                   <thead>
                     <tr>
                       <th style={{ ...thStyle, width: "6%" }}>#</th>
-                      <th style={{ ...thStyle, width: "18%" }}>NF-e</th>
-                      <th style={{ ...thStyle, width: "34%" }}>Produto(s)</th>
-                      <th style={{ ...thStyle, width: "10%" }}>Volumes</th>
-                      <th style={{ ...thStyle, width: "14%" }}>Pedido</th>
-                      <th style={{ ...thStyle, width: "18%" }}>Obs</th>
+                      <th style={{ ...thStyle, width: "20%" }}>NF-e</th>
+                      <th style={{ ...thStyle, width: "40%" }}>Produto(s)</th>
+                      <th style={{ ...thStyle, width: "14%" }}>Volumes</th>
+                      <th style={{ ...thStyle, width: "20%" }}>Pedido</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -295,7 +294,6 @@ function RomaneioDoc({ dados, forCapture }) {
                         <td style={{ ...valueStyle, lineHeight: 1.3 }}>{n.produtos || "—"}</td>
                         <td style={{ ...valueStyle, textAlign: "center" }}>{n.quantidade_volumes || "1"}</td>
                         <td style={{ ...valueStyle }}>{n.numero_pedido || "—"}</td>
-                        <td style={{ ...valueStyle, fontSize: 11 }}>{n.observacoes || "—"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -306,7 +304,6 @@ function RomaneioDoc({ dados, forCapture }) {
             <>
               <Row label="N. da NF:" value={notas[0]?.numero_nf} />
               <Row label="Pedido:" value={notas[0]?.numero_pedido} />
-              <Row label="Observações:" value={notas[0]?.observacoes} />
               <Section title="Descrição da Mercadoria" />
               <Row label="Produto(s):" value={notas[0]?.produtos} />
               <Row label="Quantidade de Volumes:" value={notas[0]?.quantidade_volumes} />
