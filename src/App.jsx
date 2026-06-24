@@ -217,38 +217,43 @@ function PreviewModal({ imgDataUrl, pdfBlob, filename, onClose }) {
 function RomaneioDoc({ dados, forCapture }) {
   const notas = dados.notas || [];
   const isMulti = notas.length > 1;
+  const totalVolumes = notas.reduce((s, n) => s + (parseInt(n.quantidade_volumes) || 1), 0);
+  const nfHeader = isMulti ? `${notas.length} Notas Fiscais` : (notas[0]?.numero_nf ? `NF-e ${notas[0].numero_nf}` : "Romaneio de Carga");
+  const wrapRef = useRef(null);
+  const innerRef = useRef(null);
+  const [scale, setScale] = useState(1);
 
-  const style = forCapture
-    ? { width: "100%", maxWidth: 794, minHeight: 1123, background: "#fff", fontFamily: "Arial, sans-serif", padding: "20px 24px", boxSizing: "border-box", overflow: "hidden", display: "flex", flexDirection: "column" }
-    : { background: "#fff", border: "1px solid #CBD5E1", borderRadius: 10, overflow: "hidden" };
+  useEffect(() => {
+    if (!forCapture || !wrapRef.current || !innerRef.current) return;
+    const A4_HEIGHT = 1123;
+    const contentH = innerRef.current.scrollHeight;
+    setScale(contentH > A4_HEIGHT ? A4_HEIGHT / contentH : 1);
+  }, [dados, forCapture]);
 
-  const thStyle = { background: "#0F172A", color: "#fff", fontWeight: 700, fontSize: 9, padding: "4px 8px", textTransform: "uppercase", letterSpacing: "1.5px", textAlign: "left" };
-  const labelStyle = { width: "34%", padding: "4px 8px", fontWeight: 700, fontSize: 10, color: "#0F172A", background: "#F8FAFC", borderRight: "1px solid #CBD5E1", borderBottom: "1px solid #E2E8F0", whiteSpace: "nowrap" };
-  const valueStyle = { padding: "4px 8px", fontSize: 10, color: "#0F172A", borderBottom: "1px solid #E2E8F0", fontWeight: 400, wordBreak: "break-word" };
+  const thStyle = { background: "#0F172A", color: "#fff", fontWeight: 700, fontSize: 11, padding: "6px 10px", textTransform: "uppercase", letterSpacing: "1.5px", textAlign: "left" };
+  const labelStyle = { width: "34%", padding: "6px 10px", fontWeight: 800, fontSize: 12, color: "#000", background: "#F1F5F9", borderRight: "1px solid #CBD5E1", borderBottom: "1px solid #CBD5E1", whiteSpace: "nowrap" };
+  const valueStyle = { padding: "6px 10px", fontSize: 12, color: "#000", borderBottom: "1px solid #CBD5E1", fontWeight: 700, wordBreak: "break-word" };
 
   const Section = ({ title }) => <tr><td colSpan={2} style={thStyle}>{title}</td></tr>;
   const Row = ({ label, value }) => <tr><td style={labelStyle}>{label}</td><td style={valueStyle}>{value || "\u00A0"}</td></tr>;
 
-  const totalVolumes = notas.reduce((s, n) => s + (parseInt(n.quantidade_volumes) || 1), 0);
-  const nfHeader = isMulti ? `${notas.length} Notas Fiscais` : (notas[0]?.numero_nf ? `NF-e ${notas[0].numero_nf}` : "Romaneio de Carga");
-
-  return (
-    <div style={style}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, paddingBottom: 8, borderBottom: "2px solid #0F172A", gap: 10, flexWrap: "wrap" }}>
-        <div style={{ minWidth: 0, flex: 1, display: "flex", gap: 10, alignItems: "center" }}>
-          <img src="/image.png" alt="Logo" style={{ height: forCapture ? 70 : 110, objectFit: "contain", flexShrink: 0 }} />
+  const inner = (
+    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, paddingBottom: 10, borderBottom: "2px solid #0F172A", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ minWidth: 0, flex: 1, display: "flex", gap: 12, alignItems: "center" }}>
+          <img src="/image.png" alt="Logo" style={{ height: forCapture ? 80 : 110, objectFit: "contain", flexShrink: 0 }} />
           <div>
-            <div style={{ fontSize: forCapture ? 14 : 17, fontWeight: 900, color: "#0F172A" }}>SOLLARSUL ENERGIA SOLAR LTDA</div>
-            <div style={{ fontSize: forCapture ? 10 : 12, color: "#475569", marginTop: 2 }}>CNPJ: {REMETENTE.cnpj}</div>
-            <div style={{ fontSize: forCapture ? 10 : 12, color: "#475569", marginTop: 1 }}>{REMETENTE.endereco}</div>
-            <div style={{ fontSize: forCapture ? 10 : 12, color: "#475569", marginTop: 1 }}>Tel: {REMETENTE.telefone}</div>
+            <div style={{ fontSize: forCapture ? 16 : 17, fontWeight: 900, color: "#000" }}>SOLLARSUL ENERGIA SOLAR LTDA</div>
+            <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 2 }}>CNPJ: {REMETENTE.cnpj}</div>
+            <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 1 }}>{REMETENTE.endereco}</div>
+            <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 1 }}>Tel: {REMETENTE.telefone}</div>
           </div>
         </div>
         <div style={{ textAlign: "right", flexShrink: 0 }}>
-          <div style={{ fontSize: forCapture ? 13 : 14, fontWeight: 900, color: "#0F172A", textTransform: "uppercase" }}>Romaneio de Carga</div>
-          <div style={{ fontSize: forCapture ? 10 : 12, color: "#475569", fontWeight: 600, marginTop: 2 }}>Comprovante de Retirada</div>
-          <div style={{ marginTop: 6, display: "inline-block", border: "1.5px solid #0F172A", borderRadius: 4, padding: "2px 8px" }}>
-            <span style={{ fontSize: forCapture ? 11 : 13, fontWeight: 700, color: "#0F172A" }}>{nfHeader}</span>
+          <div style={{ fontSize: forCapture ? 15 : 14, fontWeight: 900, color: "#000", textTransform: "uppercase" }}>Romaneio de Carga</div>
+          <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 2 }}>Comprovante de Retirada</div>
+          <div style={{ marginTop: 6, display: "inline-block", border: "2px solid #0F172A", borderRadius: 4, padding: "3px 10px" }}>
+            <span style={{ fontSize: forCapture ? 13 : 13, fontWeight: 900, color: "#000" }}>{nfHeader}</span>
           </div>
         </div>
       </div>
@@ -274,20 +279,22 @@ function RomaneioDoc({ dados, forCapture }) {
                   <thead>
                     <tr>
                       <th style={{ ...thStyle, width: "6%" }}>#</th>
-                      <th style={{ ...thStyle, width: "20%" }}>NF-e</th>
-                      <th style={{ ...thStyle, width: "40%" }}>Produto(s)</th>
-                      <th style={{ ...thStyle, width: "14%" }}>Volumes</th>
-                      <th style={{ ...thStyle, width: "20%" }}>Pedido</th>
+                      <th style={{ ...thStyle, width: "18%" }}>NF-e</th>
+                      <th style={{ ...thStyle, width: "34%" }}>Produto(s)</th>
+                      <th style={{ ...thStyle, width: "10%" }}>Volumes</th>
+                      <th style={{ ...thStyle, width: "14%" }}>Pedido</th>
+                      <th style={{ ...thStyle, width: "18%" }}>Obs</th>
                     </tr>
                   </thead>
                   <tbody>
                     {notas.map((n, i) => (
                       <tr key={i}>
-                        <td style={{ ...valueStyle, textAlign: "center", fontWeight: 700 }}>{i + 1}</td>
-                        <td style={{ ...valueStyle, fontWeight: 700 }}>{n.numero_nf || "—"}</td>
+                        <td style={{ ...valueStyle, textAlign: "center", fontWeight: 900 }}>{i + 1}</td>
+                        <td style={{ ...valueStyle, fontWeight: 900 }}>{n.numero_nf || "—"}</td>
                         <td style={{ ...valueStyle, lineHeight: 1.3 }}>{n.produtos || "—"}</td>
                         <td style={{ ...valueStyle, textAlign: "center" }}>{n.quantidade_volumes || "1"}</td>
                         <td style={{ ...valueStyle }}>{n.numero_pedido || "—"}</td>
+                        <td style={{ ...valueStyle, fontSize: 11 }}>{n.observacoes || "—"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -298,6 +305,7 @@ function RomaneioDoc({ dados, forCapture }) {
             <>
               <Row label="N. da NF:" value={notas[0]?.numero_nf} />
               <Row label="Pedido:" value={notas[0]?.numero_pedido} />
+              <Row label="Observações:" value={notas[0]?.observacoes} />
               <Section title="Descrição da Mercadoria" />
               <Row label="Produto(s):" value={notas[0]?.produtos} />
               <Row label="Quantidade de Volumes:" value={notas[0]?.quantidade_volumes} />
@@ -306,11 +314,11 @@ function RomaneioDoc({ dados, forCapture }) {
           <tr><td colSpan={2} style={thStyle}>Assinaturas</td></tr>
           <tr>
             <td colSpan={2} style={{ padding: 0, height: "100%" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", height: forCapture ? 100 : 80 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", height: forCapture ? 130 : 80 }}>
                 {["Assinatura do Motorista", "Assinatura do Responsável do CD"].map((label, i) => (
-                  <div key={i} style={{ padding: forCapture ? "12px 16px 60px" : "14px 16px 60px", position: "relative", borderRight: i === 0 ? "1px solid #CBD5E1" : "none", display: "flex", alignItems: "flex-end" }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: .5 }}>{label}</span>
-                    <div style={{ position: "absolute", bottom: 18, left: 16, right: 16, height: 1, background: "#94A3B8" }} />
+                  <div key={i} style={{ padding: forCapture ? "16px 16px 80px" : "14px 16px 60px", position: "relative", borderRight: i === 0 ? "1px solid #CBD5E1" : "none", display: "flex", alignItems: "flex-end" }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "#1E293B", textTransform: "uppercase", letterSpacing: .5 }}>{label}</span>
+                    <div style={{ position: "absolute", bottom: 24, left: 16, right: 16, height: 1.5, background: "#0F172A" }} />
                   </div>
                 ))}
               </div>
@@ -318,9 +326,31 @@ function RomaneioDoc({ dados, forCapture }) {
           </tr>
         </tbody>
       </table>
-      <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontSize: 9, color: "#94A3B8" }}>
+      <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontSize: 10, color: "#1E293B", fontWeight: 600 }}>
         <span>SOLLARSUL ENERGIA SOLAR LTDA — Taquari/RS</span>
         <span>Gerado em: {new Date().toLocaleString("pt-BR")}</span>
+      </div>
+    </div>
+  );
+
+  if (!forCapture) {
+    return <div style={{ background: "#fff", border: "1px solid #CBD5E1", borderRadius: 10, overflow: "hidden" }}>{inner}</div>;
+  }
+
+  return (
+    <div ref={wrapRef} style={{ width: "100%", maxWidth: 794, height: 1123, background: "#fff", fontFamily: "Arial, sans-serif", padding: "16px 20px", boxSizing: "border-box", overflow: "hidden", position: "relative" }}>
+      <div ref={innerRef} style={{ transformOrigin: "top left", transform: `scale(${scale})`, width: 754 }}>
+        {inner}
+      </div>
+    </div>
+  );
+}
+
+  const A4_HEIGHT = 1123;
+  return (
+    <div style={{ width: "100%", maxWidth: 794, height: A4_HEIGHT, background: "#fff", fontFamily: "Arial, sans-serif", padding: "16px 20px", boxSizing: "border-box", overflow: "hidden", position: "relative" }}>
+      <div style={{ transformOrigin: "top left", width: 794 }}>
+        {inner}
       </div>
     </div>
   );
@@ -467,7 +497,7 @@ export default function App() {
     setBusy(true);
     try {
       const pageSize = currentPageSize();
-      const scale = 2;
+      const scale = 3;
       const { blob, dataUrl } = await elementToOutput(ref.current, { scale, pageSize });
       setModal({ imgDataUrl: dataUrl, pdfBlob: blob, filename });
     } catch (err) { alert("Erro: " + err.message); }
@@ -477,7 +507,7 @@ export default function App() {
     setBusy(true);
     try {
       const pageSize = currentPageSize();
-      const scale = 2;
+      const scale = 3;
       const { blob } = await elementToOutput(ref.current, { scale, pageSize });
       downloadBlob(blob, filename);
     } catch (err) { alert("Erro: " + err.message); }
