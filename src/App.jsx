@@ -13,7 +13,7 @@ const REMETENTE = {
   razao_social: "SOLLARSUL ENERGIA SOLAR LTDA",
   cnpj: "42.366.377/0001-48",
   endereco: "ROD ALEIXO ROCHA DA SILVA, Nº 1320, PINHEIROS - TAQUARI/RS - CEP 95.860-000",
-  telefone: "(51) 9 9564-8255",
+  telefone: "(51) 98034-5313",
 };
 
 // ── HTML sanitizer ─────────────────────────────────────────────
