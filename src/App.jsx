@@ -10,10 +10,10 @@ const MAX_RETRIES = 3;
 const FIELDS_PER_NF = ["numero_nf", "produtos", "quantidade_volumes", "numero_pedido", "observacoes"];
 
 const REMETENTE = {
-  razao_social: "FRICLIM",
+  razao_social: "SOLLARSUL ENERGIA SOLAR LTDA",
   cnpj: "42.366.377/0001-48",
   endereco: "ROD ALEIXO ROCHA DA SILVA, Nº 1320, PINHEIROS - TAQUARI/RS - CEP 95.860-000",
-  telefone: "(51) 2666-0223",
+  telefone: "(51) 9 9564-8255",
 };
 
 // ── HTML sanitizer ─────────────────────────────────────────────
@@ -243,8 +243,10 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
         <div style={{ minWidth: 0, flex: 1, display: "flex", gap: 12, alignItems: "center" }}>
           <img src="/image.png" alt="Logo" style={{ height: forCapture ? 80 : 110, objectFit: "contain", flexShrink: 0 }} />
           <div>
-            <div style={{ fontSize: forCapture ? 16 : 17, fontWeight: 900, color: "#000" }}>FRICLIM CONTATO: {REMETENTE.telefone}</div>
-            <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 2 }}>GRUPO SOLLAR SUL+</div>
+            <div style={{ fontSize: forCapture ? 16 : 17, fontWeight: 900, color: "#000" }}>SOLLARSUL ENERGIA SOLAR LTDA</div>
+            <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 2 }}>CNPJ: {REMETENTE.cnpj}</div>
+            <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 1 }}>{REMETENTE.endereco}</div>
+            <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 1 }}>Tel: {REMETENTE.telefone}</div>
           </div>
         </div>
         <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -323,7 +325,7 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
         </tbody>
       </table>
       <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontSize: 10, color: "#1E293B", fontWeight: 600, flexWrap: "wrap", gap: 4 }}>
-        <span>FRICLIM — Taquari/RS</span>
+        <span>SOLLARSUL ENERGIA SOLAR LTDA — Taquari/RS</span>
         {userEmail && <span>Gerado por: {userEmail}</span>}
         <span>Gerado em: {new Date().toLocaleString("pt-BR")}</span>
       </div>
