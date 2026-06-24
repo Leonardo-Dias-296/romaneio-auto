@@ -355,7 +355,7 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
     <div style={{ ...size, background: "#fff", border: "2px solid #000", borderRadius: forCapture ? 0 : 6, overflow: "hidden", display: "flex", flexDirection: "column" }}>
       <div style={{ borderBottom: "2px solid #000", padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ fontWeight: 900, fontSize: 15, color: "#000" }}>SOLLAR SUL</div>
+          <div style={{ fontWeight: 900, fontSize: 15, color: "#000" }}>FRICLIM</div>
           <div style={{ fontSize: 10, color: "#000", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Energia Solar</div>
         </div>
         <div style={{ border: "2px solid #000", borderRadius: 4, padding: "4px 10px", textAlign: "center" }}>
