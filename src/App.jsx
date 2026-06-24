@@ -1006,10 +1006,7 @@ export default function App() {
                           <Field label="Pedido" value={nota.numero_pedido} onChange={v => updNota(idx, "numero_pedido", v)} />
                         </div>
                         <Field label="Produto(s)" value={nota.produtos} onChange={v => updNota(idx, "produtos", v)} />
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                          <Field label="Qtd de Volumes" value={nota.quantidade_volumes} onChange={v => updNota(idx, "quantidade_volumes", v)} />
-                          <Field label="Observações" value={nota.observacoes} onChange={v => updNota(idx, "observacoes", v)} />
-                        </div>
+                        <Field label="Qtd de Volumes" value={nota.quantidade_volumes} onChange={v => updNota(idx, "quantidade_volumes", v)} />
                       </div>
                     ))}
                     <button onClick={addNota}
