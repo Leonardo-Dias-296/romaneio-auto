@@ -127,6 +127,7 @@ export default async function handler(req, res) {
       let qtdVolumes = (nfData.itens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0);
       let pesoBruto = nfData.pesoBruto || null;
       let pesoLiquido = nfData.pesoLiquido || null;
+      let numeroPedido = nfData.numeroPedidoLoja || null;
       const xmlUrl = nfData.xml || null;
       if (xmlUrl) {
         try {
@@ -142,6 +143,10 @@ export default async function handler(req, res) {
             if (!pesoLiquido) {
               const plMatch = xmlText.match(/<pesoL>([\d.]+)<\/pesoL>/);
               if (plMatch) pesoLiquido = parseFloat(plMatch[1]);
+            }
+            if (!numeroPedido) {
+              const pedMatch = xmlText.match(/<xPed>(\d+)<\/xPed>/);
+              if (pedMatch) numeroPedido = pedMatch[1];
             }
           }
         } catch {}
@@ -162,7 +167,7 @@ export default async function handler(req, res) {
         horario_retirada: null,
         produtos: (nfData.itens || []).map(i => i.descricao).join(", ") || null,
         quantidade_volumes: String(qtdVolumes),
-        numero_pedido: nfData.numeroPedidoLoja || null,
+        numero_pedido: numeroPedido,
         observacoes: nfData.obs_interna || nfData.obs || null,
         peso_bruto: pesoBruto,
         peso_liquido: pesoLiquido,
