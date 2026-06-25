@@ -120,6 +120,31 @@ export default async function handler(req, res) {
         observacoes: nfData.obs_interna || nfData.obs || null,
       };
 
+      // Enriquece dados da transportadora via ReceitaWS (endereço, cidade, UF, telefone)
+      const cnpjLimpo = (transportador.numeroDocumento || "").replace(/\D/g, "");
+      if (cnpjLimpo && cnpjLimpo.length === 14) {
+        try {
+          const rws = await fetch(`https://www.receitaws.com.br/v1/cnpj/${cnpjLimpo}`, { signal: AbortSignal.timeout(8000) });
+          if (rws.ok) {
+            const rwsData = await rws.json();
+            if (rwsData.status !== "ERROR") {
+              const logradouro = rwsData.logradouro || "";
+              const numero = rwsData.numero || "";
+              const bairro = rwsData.bairro || "";
+              const cidade = rwsData.municipio || "";
+              const uf = rwsData.uf || "";
+              if (logradouro) result.endereco_transp = `${logradouro}${numero ? ", " + numero : ""}${bairro ? " - " + bairro : ""}${cidade ? " - " + cidade : ""}${uf ? "/" + uf : ""}`;
+              if (cidade) result.cidade_transp = cidade;
+              if (uf) result.uf_transp = uf;
+              if (rwsData.telefone) {
+                const telMatch = rwsData.telefone.match(/\(?\d{2}\)?\s?\d{4,5}-?\d{4}/g);
+                if (telMatch) result.telefone_transp = telMatch[0];
+              }
+            }
+          }
+        } catch {}
+      }
+
       return res.status(200).json(result);
     }
 

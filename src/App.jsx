@@ -741,7 +741,6 @@ export default function App() {
         console.error("[bling] Erro:", data);
         throw new Error(data.erro || `Erro HTTP ${res.status}`);
       }
-      console.log("[bling] NF data from API:", data);
 
       // Preenche dados gerais
       const shared = {};
