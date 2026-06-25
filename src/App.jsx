@@ -763,7 +763,6 @@ export default function App() {
       // Verifica se já tem NFs no dados atual e adiciona
       setDados(prev => {
         const notasExistentes = prev.notas || [];
-        // Merge dados gerais (preenche só os vazios)
         const merged = { ...shared };
         for (const chave of campoPrefixo) {
           if (!merged[chave] && prev[chave]) merged[chave] = prev[chave];
@@ -771,6 +770,7 @@ export default function App() {
         return { ...prev, ...merged, notas: [...notasExistentes, nota] };
       });
       setBlingNumero("");
+      setStep(3);
     } catch (err) {
       alert("Erro ao buscar NF: " + err.message);
     } finally {
