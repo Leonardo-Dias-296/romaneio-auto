@@ -1,7 +1,7 @@
 // api/lib/bling.js — Bling API v3 helpers (OAuth 2.0 + JWT)
 
 const BLING_BASE = "https://api.bling.com.br/Api/v3";
-const BLING_AUTH = "https://login.bling.com.br/oauth";
+const BLING_AUTH = "https://www.bling.com.br/Api/v3/oauth";
 
 export function getBlingClientId() {
   return process.env.BLING_CLIENT_ID || "";

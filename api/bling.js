@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     if (req.method === "GET" && action === "auth") {
       const clientId = getBlingClientId();
       if (!clientId) return res.status(500).json({ erro: "BLING_CLIENT_ID não configurado" });
-      const authUrl = `https://login.bling.com.br/oauth/authorize?response_type=code&client_id=${clientId}&state=xyz`;
+      const authUrl = `https://www.bling.com.br/Api/v3/oauth/authorize?response_type=code&client_id=${clientId}&state=xyz`;
       return res.redirect(authUrl);
     }
 
