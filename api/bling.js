@@ -158,26 +158,44 @@ export default async function handler(req, res) {
         } catch {}
       }
 
-      // Busca pedido de venda vinculado à NF (cruza por produto)
+      // Busca pedido de venda vinculado à NF (cruza por cliente + produto)
       if (!numeroPedido) {
         try {
           const contatoId = nfEncontrada.contato?.id || nfData.contato?.id || null;
           const dataEmissao = (nfData.dataEmissao || "").substring(0, 10);
-          const nfProdutos = (nfData.itens || []).map(i => (i.codigo || "").toLowerCase()).filter(Boolean);
+          const nfDescricao = ((nfData.itens || [])[0]?.descricao || "").toLowerCase().trim();
+          const nfValor = (nfData.valorNota || 0);
           if (contatoId && dataEmissao && dataEmissao !== "0000-00-00") {
             const pedidos = await blingGet(`/pedidos/vendas?pagina=1&limite=100&idContato=${contatoId}&dataInicial=${dataEmissao}&dataFinal=${dataEmissao}`, accessToken);
             if (pedidos.data && pedidos.data.length > 0) {
+              let bestMatch = null;
               for (const ped of pedidos.data) {
                 try {
                   const pedDetalhe = await blingGet(`/pedidos/vendas/${ped.id}`, accessToken);
                   const pd = pedDetalhe.data || ped;
-                  const pedProdutos = (pd.itens || []).map(i => (i.produto?.codigo || i.codigo || "").toLowerCase()).filter(Boolean);
-                  const match = nfProdutos.some(c => pedProdutos.includes(c));
-                  if (match) {
-                    numeroPedido = String(ped.numero || pd.numero || "");
+                  // Verifica se o pedido tem NF vinculada
+                  const nfRef = pd.nfe || pd.notaFiscal || pd.nfes || null;
+                  if (nfRef) {
+                    const refNum = String(nfRef.numero || nfRef.id || nfRef.numeroNfe || "");
+                    if (refNum === String(nfData.numero || "") || refNum === String(nfEncontrada.id || "")) {
+                      bestMatch = pd;
+                      break;
+                    }
+                  }
+                  // Fallback: compara descrição do produto + valor
+                  const pedDesc = ((pd.itens || [])[0]?.produto?.descricao || (pd.itens || [])[0]?.descricao || "").toLowerCase().trim();
+                  const pedValor = pd.valorTotal || pd.valor || 0;
+                  if (nfDescricao && pedDesc && nfDescricao.substring(0, 20) === pedDesc.substring(0, 20)) {
+                    bestMatch = pd;
                     break;
                   }
+                  if (nfValor && pedValor && Math.abs(nfValor - pedValor) < 1) {
+                    bestMatch = pd;
+                  }
                 } catch {}
+              }
+              if (bestMatch) {
+                numeroPedido = String(bestMatch.numero || "");
               }
             }
           }
