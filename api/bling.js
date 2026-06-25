@@ -101,6 +101,8 @@ export default async function handler(req, res) {
       const transp = nfData.transporte || {};
       const transportador = transp.transportador || {};
 
+      const qtdVolumes = (nfData.itens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0);
+
       const result = {
         numero_nf: nfData.numero || String(numero),
         transportadora: transportador.nome || null,
@@ -115,7 +117,7 @@ export default async function handler(req, res) {
         data_retirada: new Date().toLocaleDateString("pt-BR"),
         horario_retirada: null,
         produtos: (nfData.itens || []).map(i => i.descricao).join(", ") || null,
-        quantidade_volumes: transp.volumes?.length ? String(transp.volumes.length) : (nfData.itens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0).toString(),
+        quantidade_volumes: String(qtdVolumes),
         numero_pedido: nfData.numeroPedidoLoja || null,
         observacoes: nfData.obs_interna || nfData.obs || null,
       };
@@ -124,15 +126,17 @@ export default async function handler(req, res) {
       const cnpjLimpo = (transportador.numeroDocumento || "").replace(/\D/g, "");
       if (cnpjLimpo && cnpjLimpo.length === 14 && accessToken) {
         try {
-          const contatos = await blingGet(`/contatos?pagina=1&limite=50&tipoPessoa=J`, accessToken);
+          const contatos = await blingGet(`/contatos?pagina=1&limite=100&tipoPessoa=J`, accessToken);
           if (contatos.data) {
-            const cnpjBusca = cnpjLimpo;
             const contato = contatos.data.find(c => {
               const doc = (c.numeroDocumento || "").replace(/\D/g, "");
-              return doc === cnpjBusca;
+              return doc === cnpjLimpo;
             });
-            if (contato) {
-              const end = contato.endereco?.geral || contato.endereco || {};
+            if (contato && contato.id) {
+              // Busca contato individual para pegar endereço completo
+              const detalhe = await blingGet(`/contatos/${contato.id}`, accessToken);
+              const cd = detalhe.data || contato;
+              const end = cd.endereco?.geral || cd.endereco || {};
               const log = end.endereco || "";
               const num = end.numero || "";
               const bai = end.bairro || "";
@@ -141,7 +145,7 @@ export default async function handler(req, res) {
               if (log) result.endereco_transp = `${log}${num ? ", " + num : ""}${bai ? " - " + bai : ""}${cid ? " - " + cid : ""}${uf ? "/" + uf : ""}`;
               if (cid) result.cidade_transp = cid;
               if (uf) result.uf_transp = uf;
-              if (contato.telefone) result.telefone_transp = contato.telefone;
+              if (cd.telefone) result.telefone_transp = cd.telefone;
             }
           }
         } catch (e) {
@@ -149,15 +153,27 @@ export default async function handler(req, res) {
         }
       }
 
-      // Fallback: busca telefone via ReceitaWS se não encontrou no Bling
-      if (!result.telefone_transp && cnpjLimpo && cnpjLimpo.length === 14) {
+      // Fallback: busca endereço e telefone via ReceitaWS
+      if ((!result.endereco_transp || !result.telefone_transp) && cnpjLimpo && cnpjLimpo.length === 14) {
         try {
           const rws = await fetch(`https://www.receitaws.com.br/v1/cnpj/${cnpjLimpo}`, { signal: AbortSignal.timeout(8000) });
           if (rws.ok) {
             const rwsData = await rws.json();
-            if (rwsData.status !== "ERROR" && rwsData.telefone) {
-              const telMatch = rwsData.telefone.match(/\(?\d{2}\)?\s?\d{4,5}-?\d{4}/g);
-              if (telMatch) result.telefone_transp = telMatch[0];
+            if (rwsData.status !== "ERROR") {
+              if (!result.endereco_transp) {
+                const log = rwsData.logradouro || "";
+                const num = rwsData.numero || "";
+                const bai = rwsData.bairro || "";
+                const cid = rwsData.municipio || "";
+                const uf = rwsData.uf || "";
+                if (log) result.endereco_transp = `${log}${num ? ", " + num : ""}${bai ? " - " + bai : ""}${cid ? " - " + cid : ""}${uf ? "/" + uf : ""}`;
+                if (!result.cidade_transp && cid) result.cidade_transp = cid;
+                if (!result.uf_transp && uf) result.uf_transp = uf;
+              }
+              if (!result.telefone_transp && rwsData.telefone) {
+                const telMatch = rwsData.telefone.match(/\(?\d{2}\)?\s?\d{4,5}-?\d{4}/g);
+                if (telMatch) result.telefone_transp = telMatch[0];
+              }
             }
           }
         } catch {}
