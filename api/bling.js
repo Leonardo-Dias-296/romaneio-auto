@@ -58,14 +58,21 @@ export default async function handler(req, res) {
       const accessToken = await getValidToken();
       if (!accessToken) return res.status(401).json({ erro: "Token do Bling expirado. Reconecte." });
 
-      const data = await blingGet(`/nfe/notas?numero=${numero}&limite=1`, accessToken);
+      // Busca NFs e filtra pelo número
+      let nfEncontrada = null;
+      for (let pagina = 1; pagina <= 10; pagina++) {
+        const listData = await blingGet(`/nfe?pagina=${pagina}&limite=100`, accessToken);
+        if (!listData.data || listData.data.length === 0) break;
+        nfEncontrada = listData.data.find(n => String(n.numero) === String(numero));
+        if (nfEncontrada) break;
+        if (listData.data.length < 100) break;
+      }
 
-      if (!data.data || data.data.length === 0) {
+      if (!nfEncontrada) {
         return res.status(404).json({ erro: `NF número ${numero} não encontrada no Bling.` });
       }
 
-      const nf = data.data[0];
-      const detail = await blingGet(`/nfe/notas/${nf.id}`, accessToken);
+      const detail = await blingGet(`/nfe/${nfEncontrada.id}`, accessToken);
       const nfData = detail.data || {};
 
       const result = {
