@@ -129,12 +129,29 @@ export default async function handler(req, res) {
       const debugVol = transp.volumes;
       const debugPesos = { pesoBruto: nfData.pesoBruto, pesoLiquido: nfData.pesoLiquido, pesoBrutoT: transp.pesoBruto, pesoLiquidoT: transp.pesoLiquido };
       const debugItem0 = nfData.itens?.[0] ? Object.keys(nfData.itens[0]) : [];
+      const debugXmlUrl = nfData.xml || null;
 
       // Tenta pegar volumes de vários campos possíveis
-      const volFromTransp = transp.volumes?.length || 0;
-      const volFromNfData = nfData.volumes?.length || 0;
+      let volFromTransp = transp.volumes?.length || 0;
+      let volFromNfData = nfData.volumes?.length || 0;
       const volFromItens = (nfData.itens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0);
-      const qtdVolumes = volFromTransp || volFromNfData || volFromItens;
+
+      // Tenta buscar volumes do XML da NF-e
+      let volFromXml = 0;
+      const xmlUrl = nfData.xml || nfData.linkXml || nfData.xmlNfe || null;
+      if (xmlUrl) {
+        try {
+          const xmlRes = await fetch(xmlUrl, { signal: AbortSignal.timeout(10000) });
+          if (xmlRes.ok) {
+            const xmlText = await xmlRes.text();
+            // Busca <qVol> no XML (quantidade de volumes)
+            const qVolMatch = xmlText.match(/<qVol>(\d+)<\/qVol>/);
+            if (qVolMatch) volFromXml = parseInt(qVolMatch[1]) || 0;
+          }
+        } catch {}
+      }
+
+      const qtdVolumes = volFromTransp || volFromNfData || volFromXml || volFromItens;
 
       const result = {
         _debug_nf_keys: debugNfKeys,
@@ -142,6 +159,8 @@ export default async function handler(req, res) {
         _debug_volumes: debugVol,
         _debug_pesos: debugPesos,
         _debug_item0_keys: debugItem0,
+        _debug_xml_url: debugXmlUrl,
+        _debug_vol_from_xml: volFromXml,
         numero_nf: nfData.numero || numStr,
         transportadora: transportador.nome || null,
         cnpj_transp: transportador.numeroDocumento || null,
@@ -158,6 +177,8 @@ export default async function handler(req, res) {
         quantidade_volumes: String(qtdVolumes),
         numero_pedido: nfData.numeroPedidoLoja || null,
         observacoes: nfData.obs_interna || nfData.obs || null,
+        peso_bruto: nfData.pesoBruto || transp.pesoBruto || null,
+        peso_liquido: nfData.pesoLiquido || transp.pesoLiquido || null,
       };
 
       // Busca dados completos da transportadora via API de contatos do Bling
