@@ -101,6 +101,10 @@ export async function saveToken(accessToken, refreshToken, expiresAt) {
   }
 }
 
+export async function deleteToken() {
+  await supabaseRequest("?key=eq.default", "DELETE");
+}
+
 // ── Exchange authorization code for tokens ──────────────────────
 export async function exchangeCodeForTokens(code, req) {
   const creds = Buffer.from(`${getBlingClientId()}:${getBlingClientSecret()}`).toString("base64");

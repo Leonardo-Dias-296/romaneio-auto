@@ -1,7 +1,7 @@
 // api/bling.js — Bling API integration (OAuth 2.0 + NF search)
 import crypto from "crypto";
 import { setCors, checkRateLimit } from "./lib/auth.js";
-import { getBlingClientId, getValidToken, blingGet, getToken, exchangeCodeForTokens } from "./lib/bling.js";
+import { getBlingClientId, getValidToken, blingGet, getToken, exchangeCodeForTokens, deleteToken } from "./lib/bling.js";
 
 export const config = { api: { bodyParser: false } };
 
@@ -58,6 +58,12 @@ export default async function handler(req, res) {
     if (req.method === "GET" && action === "status") {
       const token = await getToken();
       return res.status(200).json({ connected: !!token });
+    }
+
+    // ── GET /api/bling?action=disconnect → remove token ──
+    if (req.method === "GET" && action === "disconnect") {
+      await deleteToken();
+      return res.status(200).json({ ok: true });
     }
 
     // ── GET /api/bling?action=test → test Bling API connection ──
@@ -117,9 +123,6 @@ export default async function handler(req, res) {
         return res.status(404).json({ erro: "NF não encontrada no Bling." });
       }
 
-      // Debug: log ALL fields from the NF listing entry
-      const debugNfListFields = JSON.stringify(Object.keys(nfEncontrada));
-
       const detail = await blingGet(`/nfe/${nfEncontrada.id}`, accessToken);
       const nfData = detail.data || {};
 
@@ -156,25 +159,17 @@ export default async function handler(req, res) {
       }
 
       // Busca pedido de venda vinculado à NF
-      let debugPedidoFields = null;
-      let debugPedidoSearch = {};
       if (!numeroPedido) {
         try {
           const contatoId = nfEncontrada.contato?.id || nfData.contato?.id || null;
           const dataEmissao = (nfData.dataEmissao || "").substring(0, 10);
-          debugPedidoSearch = { contatoId, dataEmissao, nfNumero: nfData.numero };
           if (contatoId && dataEmissao && dataEmissao !== "0000-00-00") {
-            const pedidosUrl = `/pedidos/vendas?pagina=1&limite=100&idContato=${contatoId}&dataInicial=${dataEmissao}&dataFinal=${dataEmissao}`;
-            debugPedidoSearch.url = pedidosUrl;
-            const pedidos = await blingGet(pedidosUrl, accessToken);
-            debugPedidoSearch.pedidosCount = pedidos.data?.length || 0;
-            debugPedidoSearch.pedidosSummary = (pedidos.data || []).map(p => ({ id: p.id, numero: p.numero }));
+            const pedidos = await blingGet(`/pedidos/vendas?pagina=1&limite=100&idContato=${contatoId}&dataInicial=${dataEmissao}&dataFinal=${dataEmissao}`, accessToken);
             if (pedidos.data && pedidos.data.length > 0) {
               for (const ped of pedidos.data) {
                 try {
                   const pedDetalhe = await blingGet(`/pedidos/vendas/${ped.id}`, accessToken);
                   const pd = pedDetalhe.data || ped;
-                  debugPedidoFields = { keys: Object.keys(pd), numero: pd.numero, id: pd.id, pd_keys_sub: Object.keys(pd).filter(k => typeof pd[k] === "object" && pd[k] !== null) };
                   const nfRef = pd.nfe || pd.notaFiscal || null;
                   if (nfRef && String(nfRef.numero || nfRef.id || "") === String(nfData.numero || nfEncontrada.id || "")) {
                     numeroPedido = String(ped.numero || pd.numero || ped.id || "");
@@ -184,18 +179,14 @@ export default async function handler(req, res) {
                     numeroPedido = String(ped.numero || pd.numero || ped.id || "");
                     break;
                   }
-                } catch (e) { debugPedidoSearch.detailError = e.message; }
+                } catch {}
               }
             }
           }
-        } catch (e) { debugPedidoSearch.error = e.message; }
+        } catch {}
       }
 
       const result = {
-        _debug_nf_list_fields: debugNfListFields,
-        _debug_nf_list_entry: JSON.stringify(nfEncontrada).substring(0, 800),
-        _debug_pedido_fields: debugPedidoFields,
-        _debug_pedido_search: debugPedidoSearch,
         numero_nf: nfData.numero || numStr,
         transportadora: transportador.nome || null,
         cnpj_transp: transportador.numeroDocumento || null,

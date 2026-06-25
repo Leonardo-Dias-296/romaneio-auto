@@ -746,7 +746,6 @@ export default function App() {
           body: JSON.stringify({ numero: num }),
         });
         const data = await res.json();
-        console.log("[bling] Debug NF", num + ":", JSON.stringify({ _debug_pedido_search: data._debug_pedido_search, _debug_pedido_fields: data._debug_pedido_fields }, null, 2));
         if (!res.ok) {
           console.error("[bling] Erro NF", num + ":", data);
           continue;
@@ -1033,7 +1032,10 @@ export default function App() {
                 )}
                 <div style={{ marginTop: 10, display: "flex", gap: 12, alignItems: "center" }}>
                   {blingConnected ? (
-                    <span style={{ fontSize: 11, color: "#16A34A", fontWeight: 700 }}>✓ Bling conectado</span>
+                    <>
+                      <span style={{ fontSize: 11, color: "#16A34A", fontWeight: 700 }}>✓ Bling conectado</span>
+                      <a onClick={async () => { await fetch("/api/bling?action=disconnect"); setBlingConnected(false); }} style={{ fontSize: 11, color: "#EF4444", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Reconectar</a>
+                    </>
                   ) : (
                     <a href="/api/bling?action=auth" style={{ fontSize: 11, color: "#2563EB", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Conectar Bling</a>
                   )}
