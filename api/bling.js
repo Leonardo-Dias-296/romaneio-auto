@@ -123,44 +123,31 @@ export default async function handler(req, res) {
       const transp = nfData.transporte || {};
       const transportador = transp.transportador || {};
 
-      // Debug: log toda a estrutura de transporte e campos de volume/peso
-      const debugNfKeys = Object.keys(nfData);
-      const debugTranspKeys = Object.keys(transp);
-      const debugVol = transp.volumes;
-      const debugPesos = { pesoBruto: nfData.pesoBruto, pesoLiquido: nfData.pesoLiquido, pesoBrutoT: transp.pesoBruto, pesoLiquidoT: transp.pesoLiquido };
-      const debugItem0 = nfData.itens?.[0] ? Object.keys(nfData.itens[0]) : [];
-      const debugXmlUrl = nfData.xml || null;
-
-      // Tenta pegar volumes de vários campos possíveis
-      let volFromTransp = transp.volumes?.length || 0;
-      let volFromNfData = nfData.volumes?.length || 0;
-      const volFromItens = (nfData.itens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0);
-
-      // Tenta buscar volumes do XML da NF-e
-      let volFromXml = 0;
-      const xmlUrl = nfData.xml || nfData.linkXml || nfData.xmlNfe || null;
+      // Busca volumes e peso do XML da NF-e (campo mais confiável)
+      let qtdVolumes = (nfData.itens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0);
+      let pesoBruto = nfData.pesoBruto || null;
+      let pesoLiquido = nfData.pesoLiquido || null;
+      const xmlUrl = nfData.xml || null;
       if (xmlUrl) {
         try {
           const xmlRes = await fetch(xmlUrl, { signal: AbortSignal.timeout(10000) });
           if (xmlRes.ok) {
             const xmlText = await xmlRes.text();
-            // Busca <qVol> no XML (quantidade de volumes)
             const qVolMatch = xmlText.match(/<qVol>(\d+)<\/qVol>/);
-            if (qVolMatch) volFromXml = parseInt(qVolMatch[1]) || 0;
+            if (qVolMatch) qtdVolumes = parseInt(qVolMatch[1]) || qtdVolumes;
+            if (!pesoBruto) {
+              const pbMatch = xmlText.match(/<pesoB>([\d.]+)<\/pesoB>/);
+              if (pbMatch) pesoBruto = parseFloat(pbMatch[1]);
+            }
+            if (!pesoLiquido) {
+              const plMatch = xmlText.match(/<pesoL>([\d.]+)<\/pesoL>/);
+              if (plMatch) pesoLiquido = parseFloat(plMatch[1]);
+            }
           }
         } catch {}
       }
 
-      const qtdVolumes = volFromTransp || volFromNfData || volFromXml || volFromItens;
-
       const result = {
-        _debug_nf_keys: debugNfKeys,
-        _debug_transp_keys: debugTranspKeys,
-        _debug_volumes: debugVol,
-        _debug_pesos: debugPesos,
-        _debug_item0_keys: debugItem0,
-        _debug_xml_url: debugXmlUrl,
-        _debug_vol_from_xml: volFromXml,
         numero_nf: nfData.numero || numStr,
         transportadora: transportador.nome || null,
         cnpj_transp: transportador.numeroDocumento || null,
@@ -177,8 +164,8 @@ export default async function handler(req, res) {
         quantidade_volumes: String(qtdVolumes),
         numero_pedido: nfData.numeroPedidoLoja || null,
         observacoes: nfData.obs_interna || nfData.obs || null,
-        peso_bruto: nfData.pesoBruto || transp.pesoBruto || null,
-        peso_liquido: nfData.pesoLiquido || transp.pesoLiquido || null,
+        peso_bruto: pesoBruto,
+        peso_liquido: pesoLiquido,
       };
 
       // Busca dados completos da transportadora via API de contatos do Bling
