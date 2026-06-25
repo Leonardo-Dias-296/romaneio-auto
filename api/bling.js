@@ -120,26 +120,44 @@ export default async function handler(req, res) {
         observacoes: nfData.obs_interna || nfData.obs || null,
       };
 
-      // Busca endereço, cidade, UF e telefone da transportadora pelo CNPJ (ReceitaWS)
+      // Busca dados completos da transportadora via API de contatos do Bling
       const cnpjLimpo = (transportador.numeroDocumento || "").replace(/\D/g, "");
-      if (cnpjLimpo && cnpjLimpo.length === 14) {
+      if (cnpjLimpo && cnpjLimpo.length === 14 && accessToken) {
+        try {
+          const contatos = await blingGet(`/contatos?pagina=1&limite=50&tipoPessoa=J`, accessToken);
+          if (contatos.data) {
+            const cnpjBusca = cnpjLimpo;
+            const contato = contatos.data.find(c => {
+              const doc = (c.numeroDocumento || "").replace(/\D/g, "");
+              return doc === cnpjBusca;
+            });
+            if (contato) {
+              const end = contato.endereco?.geral || contato.endereco || {};
+              const log = end.endereco || "";
+              const num = end.numero || "";
+              const bai = end.bairro || "";
+              const cid = end.municipio || "";
+              const uf = end.uf || "";
+              if (log) result.endereco_transp = `${log}${num ? ", " + num : ""}${bai ? " - " + bai : ""}${cid ? " - " + cid : ""}${uf ? "/" + uf : ""}`;
+              if (cid) result.cidade_transp = cid;
+              if (uf) result.uf_transp = uf;
+              if (contato.telefone) result.telefone_transp = contato.telefone;
+            }
+          }
+        } catch (e) {
+          console.error("[bling] Erro ao buscar contato:", e.message);
+        }
+      }
+
+      // Fallback: busca telefone via ReceitaWS se não encontrou no Bling
+      if (!result.telefone_transp && cnpjLimpo && cnpjLimpo.length === 14) {
         try {
           const rws = await fetch(`https://www.receitaws.com.br/v1/cnpj/${cnpjLimpo}`, { signal: AbortSignal.timeout(8000) });
           if (rws.ok) {
             const rwsData = await rws.json();
-            if (rwsData.status !== "ERROR") {
-              const log = rwsData.logradouro || "";
-              const num = rwsData.numero || "";
-              const bai = rwsData.bairro || "";
-              const cid = rwsData.municipio || "";
-              const uf = rwsData.uf || "";
-              if (log) result.endereco_transp = `${log}${num ? ", " + num : ""}${bai ? " - " + bai : ""}${cid ? " - " + cid : ""}${uf ? "/" + uf : ""}`;
-              if (cid) result.cidade_transp = cid;
-              if (uf) result.uf_transp = uf;
-              if (rwsData.telefone) {
-                const telMatch = rwsData.telefone.match(/\(?\d{2}\)?\s?\d{4,5}-?\d{4}/g);
-                if (telMatch) result.telefone_transp = telMatch[0];
-              }
+            if (rwsData.status !== "ERROR" && rwsData.telefone) {
+              const telMatch = rwsData.telefone.match(/\(?\d{2}\)?\s?\d{4,5}-?\d{4}/g);
+              if (telMatch) result.telefone_transp = telMatch[0];
             }
           }
         } catch {}
