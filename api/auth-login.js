@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_KEY, setCors, checkRateLimit } from "./lib/auth.js";
+import { gerarToken, autenticar, setCors, checkRateLimit } from "./lib/auth.js";
 
 export const config = { api: { bodyParser: true, sizeLimit: "1mb" } };
 
@@ -17,16 +17,16 @@ export default async function handler(req, res) {
   if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ erro: "Email inválido" });
   }
+  if (typeof password !== "string" || password.length < 6) {
+    return res.status(400).json({ erro: "Senha inválida" });
+  }
 
   try {
-    const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      method: "POST",
-      headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await r.json();
-    if (!r.ok) return res.status(401).json({ erro: "Email ou senha inválidos" });
-    return res.status(200).json(data);
+    const user = await autenticar(email, password);
+    if (!user) return res.status(401).json({ erro: "Email ou senha inválidos" });
+    // Retorna JWT customizado — nunca expõe tokens brutos do Supabase
+    const token = gerarToken({ email: user.email, nome: user.nome, role: user.role });
+    return res.status(200).json({ token, user });
   } catch {
     return res.status(500).json({ erro: "Erro ao conectar com servidor" });
   }

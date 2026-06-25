@@ -1,4 +1,5 @@
-// api/lib/bling.js — Bling API v3 helpers (OAuth 2.0 + JWT)
+// api/lib/bling.js — Bling API v3 helpers (OAuth 2.0 + encrypted token storage)
+import crypto from "crypto";
 
 const BLING_BASE = "https://api.bling.com.br/Api/v3";
 const BLING_AUTH = "https://www.bling.com.br/Api/v3/oauth";
@@ -11,14 +12,44 @@ export function getBlingClientSecret() {
   return process.env.BLING_CLIENT_SECRET || "";
 }
 
-export function getBlingRedirectUri(req) {
-  const origin = req.headers.origin || req.headers.referer || "https://romaneio-auto.vercel.app";
-  return `${origin.replace(/\/$/, "")}/api/bling?action=callback`;
+export function getBlingRedirectUri() {
+  // Usa sempre a URL fixa — nunca confia em headers do request
+  const base = process.env.FRONTEND_URL || "https://romaneio-auto.vercel.app";
+  return `${base.replace(/\/$/, "")}/api/bling?action=callback`;
 }
 
-// ── Token storage via Supabase ─────────────────────────────────
+// ── Token storage via Supabase (encrypted) ──────────────────────
 const SUPABASE_URL = process.env.SUPABASE_URL || "";
 const SUPABASE_KEY = process.env.SUPABASE_SECRET_KEY || "";
+
+function getEncryptKey() {
+  const k = process.env.BLING_ENCRYPT_KEY || process.env.JWT_SECRET || "";
+  return k.length >= 32 ? k.slice(0, 32) : null;
+}
+
+function encrypt(text) {
+  const key = getEncryptKey();
+  if (!key || !text) return text;
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(key, "utf8"), iv);
+  let enc = cipher.update(text, "utf8", "hex");
+  enc += cipher.final("hex");
+  return `${iv.toString("hex")}:${enc}`;
+}
+
+function decrypt(text) {
+  const key = getEncryptKey();
+  if (!key || !text || !text.includes(":")) return text;
+  try {
+    const [ivHex, enc] = text.split(":");
+    const decipher = crypto.createDecipheriv("aes-256-cbc", Buffer.from(key, "utf8"), Buffer.from(ivHex, "hex"));
+    let dec = decipher.update(enc, "hex", "utf8");
+    dec += decipher.final("utf8");
+    return dec;
+  } catch {
+    return text;
+  }
+}
 
 async function supabaseRequest(path, method = "GET", body = null) {
   if (!SUPABASE_URL || !SUPABASE_KEY) throw new Error("Supabase não configurado");
@@ -42,23 +73,29 @@ async function supabaseRequest(path, method = "GET", body = null) {
 
 export async function getToken() {
   const rows = await supabaseRequest("?select=access_token,refresh_token,expires_at&key=eq.default&limit=1");
-  return rows[0] || null;
+  const row = rows[0] || null;
+  if (row) {
+    row.access_token = decrypt(row.access_token);
+    row.refresh_token = decrypt(row.refresh_token);
+  }
+  return row;
 }
 
 export async function saveToken(accessToken, refreshToken, expiresAt) {
-  // Try upsert
+  const encAccess = encrypt(accessToken);
+  const encRefresh = encrypt(refreshToken);
   const existing = await getToken();
   if (existing) {
     await supabaseRequest("?key=eq.default", "PATCH", {
-      access_token: accessToken,
-      refresh_token: refreshToken,
+      access_token: encAccess,
+      refresh_token: encRefresh,
       expires_at: expiresAt,
     });
   } else {
     await supabaseRequest("", "POST", {
       key: "default",
-      access_token: accessToken,
-      refresh_token: refreshToken,
+      access_token: encAccess,
+      refresh_token: encRefresh,
       expires_at: expiresAt,
     });
   }

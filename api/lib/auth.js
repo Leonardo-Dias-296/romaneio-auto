@@ -2,11 +2,12 @@ import crypto from "crypto";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "";
 const SUPABASE_KEY = process.env.SUPABASE_SECRET_KEY || "";
-const JWT_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 horas
+const JWT_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 function getSecret() {
   const s = process.env.JWT_SECRET;
   if (!s) throw new Error("JWT_SECRET não configurado");
+  if (s.length < 32) throw new Error("JWT_SECRET deve ter pelo menos 32 caracteres");
   return s;
 }
 
@@ -80,28 +81,22 @@ export function checkRateLimit(key, maxRequests = 10, windowMs = 60000) {
   return true;
 }
 
-// Limpa entries antigos a cada 5 minutos (setTimeout recursivo para evitar memory leak em serverless)
-function limparRateLimit() {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitStore) {
-    if (now - entry.start > 300000) rateLimitStore.delete(key);
-  }
-  setTimeout(limparRateLimit, 300000);
-}
-setTimeout(limparRateLimit, 300000);
-
 // ── CORS + Security headers ─────────────────────────────────────
 export function setCors(req, res) {
   const origin = req.headers.origin;
   const allowed = process.env.FRONTEND_URL || "https://romaneio-auto.vercel.app";
-  const isLocal = !origin || origin.includes("localhost") || origin.includes("127.0.0.1");
-  res.setHeader("Access-Control-Allow-Origin", isLocal ? (origin || "*") : allowed);
+  // Apenas permite origens exatas — sem localhost bypass
+  const isAllowed = origin === allowed || origin === "http://localhost:3000" || origin === "http://localhost:5173";
+  res.setHeader("Access-Control-Allow-Origin", isAllowed ? origin : allowed);
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("X-XSS-Protection", "1; mode=block");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
 }
 
 // ── Supabase helpers ───────────────────────────────────────────

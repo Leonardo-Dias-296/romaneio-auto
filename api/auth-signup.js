@@ -2,6 +2,14 @@ import { SUPABASE_URL, SUPABASE_KEY, setCors, checkRateLimit } from "./lib/auth.
 
 export const config = { api: { bodyParser: true, sizeLimit: "1mb" } };
 
+function validarSenha(s) {
+  if (typeof s !== "string" || s.length < 8 || s.length > 128) return false;
+  if (!/[A-Z]/.test(s)) return false;
+  if (!/[a-z]/.test(s)) return false;
+  if (!/\d/.test(s)) return false;
+  return true;
+}
+
 export default async function handler(req, res) {
   setCors(req, res);
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -17,11 +25,11 @@ export default async function handler(req, res) {
   if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ erro: "Email inválido" });
   }
-  if (typeof password !== "string" || password.length < 6 || password.length > 128) {
-    return res.status(400).json({ erro: "Senha deve ter entre 6 e 128 caracteres" });
+  if (!validarSenha(password)) {
+    return res.status(400).json({ erro: "Senha deve ter 8+ caracteres, com maiúscula, minúscula e número" });
   }
 
-  const cleanNome = (typeof nome === "string" ? nome : "").replace(/[<>"'`;]/g, "").trim().slice(0, 100);
+  const cleanNome = (typeof nome === "string" ? nome : "").replace(/[<>"'`;\\]/g, "").trim().slice(0, 100);
 
   try {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
@@ -31,7 +39,7 @@ export default async function handler(req, res) {
     });
     const data = await r.json();
     if (!r.ok) return res.status(400).json({ erro: "Erro ao criar conta" });
-    return res.status(200).json(data);
+    return res.status(200).json({ ok: true });
   } catch {
     return res.status(500).json({ erro: "Erro ao conectar com servidor" });
   }

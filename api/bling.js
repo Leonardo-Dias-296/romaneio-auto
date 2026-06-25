@@ -1,6 +1,7 @@
 // api/bling.js — Bling API integration (OAuth 2.0 + NF search)
+import crypto from "crypto";
 import { setCors, checkRateLimit } from "./lib/auth.js";
-import { getBlingClientId, getBlingClientSecret, getValidToken, blingGet, getToken, exchangeCodeForTokens } from "./lib/bling.js";
+import { getBlingClientId, getValidToken, blingGet, getToken, exchangeCodeForTokens } from "./lib/bling.js";
 
 export const config = { api: { bodyParser: false } };
 
@@ -21,20 +22,35 @@ export default async function handler(req, res) {
     if (req.method === "GET" && action === "auth") {
       const clientId = getBlingClientId();
       if (!clientId) return res.status(500).json({ erro: "BLING_CLIENT_ID não configurado" });
-      const authUrl = `https://www.bling.com.br/Api/v3/oauth/authorize?response_type=code&client_id=${clientId}&state=xyz`;
+      // Gera state aleatório para prevenir CSRF
+      const state = crypto.randomBytes(16).toString("hex");
+      // Armazena state em cookie HttpOnly com expiração de 10 min
+      res.setHeader("Set-Cookie", `bling_oauth_state=${state}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`);
+      const authUrl = `https://www.bling.com.br/Api/v3/oauth/authorize?response_type=code&client_id=${clientId}&state=${state}`;
       return res.redirect(authUrl);
     }
 
     // ── GET /api/bling?action=callback → handle OAuth callback ──
     if (req.method === "GET" && action === "callback") {
-      const { code, error } = Object.fromEntries(url.searchParams);
-      if (error) return res.redirect(`/?bling=error&msg=${encodeURIComponent(error)}`);
-      if (!code) return res.redirect(`/?bling=error&msg=${encodeURIComponent("Código não recebido")}`);
+      const { code, error, state } = Object.fromEntries(url.searchParams);
+      if (error) return res.redirect("/?bling=error");
+      if (!code) return res.redirect("/?bling=error");
+
+      // Valida state CSRF
+      const cookieHeader = req.headers.cookie || "";
+      const cookies = Object.fromEntries(cookieHeader.split(";").map(c => c.trim().split("=")).filter(c => c.length === 2));
+      const savedState = cookies.bling_oauth_state;
+      if (!savedState || savedState !== state) {
+        return res.redirect("/?bling=error");
+      }
+      // Limpa o cookie do state
+      res.setHeader("Set-Cookie", "bling_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0");
+
       try {
-        await exchangeCodeForTokens(code, req);
-        return res.redirect(`/?bling=success`);
-      } catch (err) {
-        return res.redirect(`/?bling=error&msg=${encodeURIComponent(err.message)}`);
+        await exchangeCodeForTokens(code);
+        return res.redirect("/?bling=success");
+      } catch {
+        return res.redirect("/?bling=error");
       }
     }
 
@@ -52,9 +68,9 @@ export default async function handler(req, res) {
         const accessToken = await getValidToken();
         if (!accessToken) return res.status(401).json({ erro: "Token inválido" });
         const testData = await blingGet("/nfe?pagina=1&limite=5", accessToken);
-        return res.status(200).json({ ok: true, count: testData.data?.length || 0, sample: testData.data?.slice(0, 2) || [] });
-      } catch (err) {
-        return res.status(500).json({ erro: err.message });
+        return res.status(200).json({ ok: true, count: testData.data?.length || 0 });
+      } catch {
+        return res.status(500).json({ erro: "Erro ao testar conexão" });
       }
     }
 
@@ -65,15 +81,22 @@ export default async function handler(req, res) {
 
       let body = "";
       for await (const chunk of req) body += chunk;
-      const { numero } = JSON.parse(body);
+      if (body.length > 500) return res.status(400).json({ erro: "Dados inválidos." });
+      let parsed;
+      try { parsed = JSON.parse(body); } catch { return res.status(400).json({ erro: "JSON inválido." }); }
+      const { numero } = parsed;
 
       if (!numero) return res.status(400).json({ erro: "Número da nota fiscal é obrigatório." });
+      const numStr = String(numero).trim();
+      if (numStr.length > 20 || !/^\d+$/.test(numStr.replace(/\D/g, ""))) {
+        return res.status(400).json({ erro: "Número inválido." });
+      }
 
       const accessToken = await getValidToken();
       if (!accessToken) return res.status(401).json({ erro: "Token do Bling expirado. Reconecte." });
 
-      // Busca NFs e filtra pelo número (remove zeros à esquerda para comparação)
-      const numBusca = String(numero).replace(/\D/g, "").replace(/^0+/, "") || String(numero).replace(/\D/g, "");
+      // Busca NFs e filtra pelo número
+      const numBusca = numStr.replace(/\D/g, "").replace(/^0+/, "") || numStr.replace(/\D/g, "");
       let nfEncontrada = null;
       for (let pagina = 1; pagina <= 10; pagina++) {
         try {
@@ -81,18 +104,17 @@ export default async function handler(req, res) {
           if (!listData.data || listData.data.length === 0) break;
           nfEncontrada = listData.data.find(n => {
             const numApi = String(n.numero || "").replace(/\D/g, "").replace(/^0+/, "");
-            return numApi === numBusca || String(n.numero) === String(numero);
+            return numApi === numBusca || String(n.numero) === numStr;
           });
           if (nfEncontrada) break;
           if (listData.data.length < 100) break;
-        } catch (listErr) {
-          console.error("[bling] Erro ao listar NFs:", listErr.message);
-          throw new Error(`Falha ao listar NFs do Bling: ${listErr.message}. Verifique se sua conta Bling tem acesso à API de NF-e.`);
+        } catch {
+          return res.status(500).json({ erro: "Erro ao listar NFs do Bling." });
         }
       }
 
       if (!nfEncontrada) {
-        return res.status(404).json({ erro: `NF número ${numero} não encontrada no Bling. Verifique o número e tente novamente.` });
+        return res.status(404).json({ erro: "NF não encontrada no Bling." });
       }
 
       const detail = await blingGet(`/nfe/${nfEncontrada.id}`, accessToken);
@@ -104,7 +126,7 @@ export default async function handler(req, res) {
       const qtdVolumes = (nfData.itens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0);
 
       const result = {
-        numero_nf: nfData.numero || String(numero),
+        numero_nf: nfData.numero || numStr,
         transportadora: transportador.nome || null,
         cnpj_transp: transportador.numeroDocumento || null,
         endereco_transp: null,
@@ -133,7 +155,6 @@ export default async function handler(req, res) {
               return doc === cnpjLimpo;
             });
             if (contato && contato.id) {
-              // Busca contato individual para pegar endereço completo
               const detalhe = await blingGet(`/contatos/${contato.id}`, accessToken);
               const cd = detalhe.data || contato;
               const end = cd.endereco?.geral || cd.endereco || {};
@@ -148,9 +169,7 @@ export default async function handler(req, res) {
               if (cd.telefone) result.telefone_transp = cd.telefone;
             }
           }
-        } catch (e) {
-          console.error("[bling] Erro ao buscar contato:", e.message);
-        }
+        } catch {}
       }
 
       // Fallback: busca endereço e telefone via ReceitaWS
@@ -183,11 +202,7 @@ export default async function handler(req, res) {
     }
 
     return res.status(405).json({ erro: "Método não permitido" });
-  } catch (err) {
-    console.error("[bling]", err.message);
-    if (err.message.includes("401") || err.message.includes("token")) {
-      return res.status(401).json({ erro: "Token do Bling expirado. Reconecte." });
-    }
-    return res.status(500).json({ erro: `Erro: ${err.message}` });
+  } catch {
+    return res.status(500).json({ erro: "Erro interno do servidor." });
   }
 }

@@ -38,8 +38,11 @@ export default async function handler(req, res) {
     if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ erro: "Email inválido" });
     }
-    if (typeof password !== "string" || password.length < 6 || password.length > 128) {
-      return res.status(400).json({ erro: "Senha deve ter entre 6 e 128 caracteres" });
+    if (typeof password !== "string" || password.length < 8 || password.length > 128) {
+      return res.status(400).json({ erro: "Senha deve ter entre 8 e 128 caracteres" });
+    }
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
+      return res.status(400).json({ erro: "Senha deve conter maiúscula, minúscula e número" });
     }
 
     try {
