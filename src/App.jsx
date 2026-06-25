@@ -103,23 +103,23 @@ async function generateEtiquetasPdf(labels, dados) {
     const pedido = l.nota.numero_pedido || dados.numero_pedido || "";
 
     wrapper.innerHTML = `
-      <div style="width:378px;height:189px;background:#fff;border:2px solid #0F172A;display:flex;flex-direction:column;overflow:hidden;">
-        <div style="border-bottom:2px solid #0F172A;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
-          <div><div style="font-weight:900;font-size:13px;color:#0F172A;">SOLLAR SUL</div><div style="font-size:9px;color:#475569;letter-spacing:1px;text-transform:uppercase;">Energia Solar</div></div>
-          <div style="border:2px solid #0F172A;border-radius:4px;padding:4px 10px;text-align:center;"><div style="font-size:7px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1px;">VOLUME</div><div style="font-weight:900;font-size:22px;color:#0F172A;line-height:1;">${escapeHtml(String(vol))}<span style="font-size:12px;font-weight:600;color:#475569;">/${escapeHtml(String(total))}</span></div></div>
+      <div style="width:378px;height:189px;background:#fff;border:2px solid #000;display:flex;flex-direction:column;overflow:hidden;">
+        <div style="border-bottom:2px solid #000;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="font-weight:900;font-size:15px;color:#000;">FRICLIM</div><div style="font-size:10px;color:#000;font-weight:700;letter-spacing:1px;text-transform:uppercase;">GRUPO SOLLAR SUL+</div></div>
+          <div style="border:2px solid #000;border-radius:4px;padding:4px 10px;text-align:center;"><div style="font-size:8px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">VOLUME</div><div style="font-weight:900;font-size:24px;color:#000;line-height:1;">${escapeHtml(String(vol))}<span style="font-size:13px;font-weight:700;color:#000;">/${escapeHtml(String(total))}</span></div></div>
         </div>
         <div style="flex:1;padding:8px 12px;display:flex;flex-direction:column;gap:6px;">
-          <div style="border-bottom:1px solid #E2E8F0;padding-bottom:5px;display:flex;justify-content:space-between;">
-            <div><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;">Nota Fiscal</div><div style="font-size:14px;font-weight:800;color:#0F172A;">NF-e ${escapeHtml(nf)}</div></div>
-            <div style="text-align:right;"><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;">Data</div><div style="font-size:11px;font-weight:600;color:#0F172A;">${escapeHtml(data)}</div></div>
+          <div style="border-bottom:1px solid #CBD5E1;padding-bottom:5px;display:flex;justify-content:space-between;">
+            <div><div style="font-size:9px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">Nota Fiscal</div><div style="font-size:15px;font-weight:900;color:#000;">NF-e ${escapeHtml(nf)}</div></div>
+            <div style="text-align:right;"><div style="font-size:9px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">Data</div><div style="font-size:12px;font-weight:800;color:#000;">${escapeHtml(data)}</div></div>
           </div>
-          <div><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Transportadora</div><div style="font-size:12px;font-weight:700;color:#0F172A;">${escapeHtml(transp)}</div></div>
-          <div><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">Produto(s)</div><div style="font-size:11px;font-weight:500;color:#0F172A;line-height:1.3;">${escapeHtml(produtos)}</div></div>
-          ${pedido ? `<div><div style="font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">Pedido</div><div style="font-size:11px;font-weight:500;color:#0F172A;">${escapeHtml(pedido)}</div></div>` : ""}
+          <div><div style="font-size:9px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Transportadora</div><div style="font-size:13px;font-weight:800;color:#000;">${escapeHtml(transp)}</div></div>
+          <div><div style="font-size:9px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">Produto(s)</div><div style="font-size:12px;font-weight:700;color:#000;line-height:1.3;">${escapeHtml(produtos)}</div></div>
+          ${pedido ? `<div><div style="font-size:9px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">Pedido</div><div style="font-size:12px;font-weight:700;color:#000;">${escapeHtml(pedido)}</div></div>` : ""}
         </div>
         <div style="border-top:1px solid #CBD5E1;padding:3px 12px;display:flex;justify-content:space-between;">
-          <span style="font-size:8px;color:#94A3B8;font-weight:600;">SOLLAR SUL © ${new Date().getFullYear()}</span>
-          <span style="font-size:8px;color:#94A3B8;font-weight:600;">Manuseie com cuidado</span>
+          <span style="font-size:8px;color:#000;font-weight:700;">FRICLIM © ${new Date().getFullYear()}</span>
+          <span style="font-size:8px;color:#000;font-weight:700;">Manuseie com cuidado</span>
         </div>
       </div>`;
     container.appendChild(wrapper);
