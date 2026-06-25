@@ -737,7 +737,10 @@ export default function App() {
         body: JSON.stringify({ numero: blingNumero.trim() }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.erro || "Erro ao buscar NF");
+      if (!res.ok) {
+        console.error("[bling] Erro:", data);
+        throw new Error(data.erro || `Erro HTTP ${res.status}`);
+      }
 
       // Preenche dados gerais
       const shared = {};
@@ -1013,11 +1016,14 @@ export default function App() {
                     {blingBusy ? "Buscando..." : "Buscar"}
                   </button>
                 </div>
-                <div style={{ marginTop: 10 }}>
+                <div style={{ marginTop: 10, display: "flex", gap: 12, alignItems: "center" }}>
                   {blingConnected ? (
                     <span style={{ fontSize: 11, color: "#16A34A", fontWeight: 700 }}>✓ Bling conectado</span>
                   ) : (
                     <a href="/api/bling?action=auth" style={{ fontSize: 11, color: "#2563EB", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Conectar Bling</a>
+                  )}
+                  {blingConnected && (
+                    <a href="/api/bling?action=test" target="_blank" style={{ fontSize: 11, color: "#64748B", textDecoration: "underline", cursor: "pointer" }}>Testar conexão</a>
                   )}
                 </div>
               </div>

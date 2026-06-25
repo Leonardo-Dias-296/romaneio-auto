@@ -44,6 +44,20 @@ export default async function handler(req, res) {
       return res.status(200).json({ connected: !!token });
     }
 
+    // ── GET /api/bling?action=test → test Bling API connection ──
+    if (req.method === "GET" && action === "test") {
+      const token = await getToken();
+      if (!token) return res.status(400).json({ erro: "Bling não conectado" });
+      try {
+        const accessToken = await getValidToken();
+        if (!accessToken) return res.status(401).json({ erro: "Token inválido" });
+        const testData = await blingGet("/nfe?pagina=1&limite=5", accessToken);
+        return res.status(200).json({ ok: true, count: testData.data?.length || 0, sample: testData.data?.slice(0, 2) || [] });
+      } catch (err) {
+        return res.status(500).json({ erro: err.message });
+      }
+    }
+
     // ── POST /api/bling → search NF by number ──
     if (req.method === "POST") {
       const token = await getToken();
@@ -58,18 +72,27 @@ export default async function handler(req, res) {
       const accessToken = await getValidToken();
       if (!accessToken) return res.status(401).json({ erro: "Token do Bling expirado. Reconecte." });
 
-      // Busca NFs e filtra pelo número
+      // Busca NFs e filtra pelo número (remove zeros à esquerda para comparação)
+      const numBusca = String(numero).replace(/\D/g, "").replace(/^0+/, "") || String(numero).replace(/\D/g, "");
       let nfEncontrada = null;
       for (let pagina = 1; pagina <= 10; pagina++) {
-        const listData = await blingGet(`/nfe?pagina=${pagina}&limite=100`, accessToken);
-        if (!listData.data || listData.data.length === 0) break;
-        nfEncontrada = listData.data.find(n => String(n.numero) === String(numero));
-        if (nfEncontrada) break;
-        if (listData.data.length < 100) break;
+        try {
+          const listData = await blingGet(`/nfe?pagina=${pagina}&limite=100`, accessToken);
+          if (!listData.data || listData.data.length === 0) break;
+          nfEncontrada = listData.data.find(n => {
+            const numApi = String(n.numero || "").replace(/\D/g, "").replace(/^0+/, "");
+            return numApi === numBusca || String(n.numero) === String(numero);
+          });
+          if (nfEncontrada) break;
+          if (listData.data.length < 100) break;
+        } catch (listErr) {
+          console.error("[bling] Erro ao listar NFs:", listErr.message);
+          throw new Error(`Falha ao listar NFs do Bling: ${listErr.message}. Verifique se sua conta Bling tem acesso à API de NF-e.`);
+        }
       }
 
       if (!nfEncontrada) {
-        return res.status(404).json({ erro: `NF número ${numero} não encontrada no Bling.` });
+        return res.status(404).json({ erro: `NF número ${numero} não encontrada no Bling. Verifique o número e tente novamente.` });
       }
 
       const detail = await blingGet(`/nfe/${nfEncontrada.id}`, accessToken);
