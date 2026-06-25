@@ -11,25 +11,6 @@ function getSecret() {
   return s;
 }
 
-// ── Password hashing (PBKDF2 com salt, 100k iterações) ────────
-export function hashSenha(senha) {
-  const salt = crypto.randomBytes(16).toString("hex");
-  const hash = crypto.pbkdf2Sync(senha, salt, 100000, 64, "sha512").toString("hex");
-  return `${salt}:${hash}`;
-}
-
-export function verificarSenha(senha, stored) {
-  if (!stored || !stored.includes(":")) return false;
-  try {
-    const [salt, hash] = stored.split(":");
-    if (salt.length !== 32 || hash.length !== 128) return false;
-    const test = crypto.pbkdf2Sync(senha, salt, 100000, 64, "sha512").toString("hex");
-    return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(test, "hex"));
-  } catch {
-    return false;
-  }
-}
-
 // ── JWT ────────────────────────────────────────────────────────
 export function gerarToken(payload) {
   const secret = getSecret();
@@ -85,8 +66,9 @@ export function checkRateLimit(key, maxRequests = 10, windowMs = 60000) {
 export function setCors(req, res) {
   const origin = req.headers.origin;
   const allowed = process.env.FRONTEND_URL || "https://romaneio-auto.vercel.app";
-  // Apenas permite origens exatas — sem localhost bypass
-  const isAllowed = origin === allowed || origin === "http://localhost:3000" || origin === "http://localhost:5173";
+  // Apenas permite origens exatas
+  const isDev = process.env.NODE_ENV !== "production";
+  const isAllowed = origin === allowed || (isDev && (origin === "http://localhost:3000" || origin === "http://localhost:5173"));
   res.setHeader("Access-Control-Allow-Origin", isAllowed ? origin : allowed);
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -119,44 +101,6 @@ export async function autenticar(email, senha) {
   } catch {
     return null;
   }
-}
-
-export async function listarUsuarios() {
-  if (!SUPABASE_URL || !SUPABASE_KEY) return [];
-  try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=nome,email,role`, {
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
-    });
-    if (!r.ok) return [];
-    return await r.json();
-  } catch {
-    return [];
-  }
-}
-
-export async function criarUsuario(nome, email, senha) {
-  if (!SUPABASE_URL || !SUPABASE_KEY) throw new Error("Supabase não configurado");
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/usuarios`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "application/json",
-      Prefer: "return=representation",
-    },
-    body: JSON.stringify({
-      nome, email,
-      senha_hash: hashSenha(senha),
-      role: "user",
-      criado_em: Date.now(),
-    }),
-  });
-  if (!r.ok) {
-    const err = await r.text();
-    if (err.includes("duplicate")) throw new Error("Email já cadastrado.");
-    throw new Error("Erro ao criar usuário.");
-  }
-  return (await r.json())[0];
 }
 
 export { SUPABASE_URL, SUPABASE_KEY };
