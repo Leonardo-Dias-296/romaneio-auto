@@ -746,6 +746,7 @@ export default function App() {
           body: JSON.stringify({ numero: num }),
         });
         const data = await res.json();
+        console.log("[bling] Debug NF", num + ":", JSON.stringify({ _debug_nf_list_fields: data._debug_nf_list_fields, _debug_nf_list_entry: data._debug_nf_list_entry }, null, 2));
         if (!res.ok) {
           console.error("[bling] Erro NF", num + ":", data);
           continue;

@@ -117,6 +117,9 @@ export default async function handler(req, res) {
         return res.status(404).json({ erro: "NF não encontrada no Bling." });
       }
 
+      // Debug: log ALL fields from the NF listing entry
+      const debugNfListFields = JSON.stringify(Object.keys(nfEncontrada));
+
       const detail = await blingGet(`/nfe/${nfEncontrada.id}`, accessToken);
       const nfData = detail.data || {};
 
@@ -153,6 +156,8 @@ export default async function handler(req, res) {
       }
 
       const result = {
+        _debug_nf_list_fields: debugNfListFields,
+        _debug_nf_list_entry: JSON.stringify(nfEncontrada).substring(0, 800),
         numero_nf: nfData.numero || numStr,
         transportadora: transportador.nome || null,
         cnpj_transp: transportador.numeroDocumento || null,
