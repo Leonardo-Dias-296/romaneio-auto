@@ -185,17 +185,16 @@ function PreviewModal({ imgDataUrl, pdfBlob, filename, onClose }) {
           img{width:100%!important;height:100%!important;object-fit:fill;}
         }
       </style></head><body><img src="${imgDataUrl}"/>
-      <script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>
       </body></html>`);
     } else {
       w.document.write(`<!DOCTYPE html><html><head><style>
         *{margin:0;padding:0;}body{margin:0;}
         iframe{width:100%;height:100vh;border:none;}
       </style></head><body><iframe src="${pdfUrl}"></iframe>
-      <script>window.onload=function(){setTimeout(function(){window.print();},500);}<\/script>
       </body></html>`);
     }
     w.document.close();
+    setTimeout(() => { try { w.print(); } catch {} }, imgDataUrl ? 300 : 500);
   }
   function handleClose() {
     if (pdfUrl) URL.revokeObjectURL(pdfUrl);
