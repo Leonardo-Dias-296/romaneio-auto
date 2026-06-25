@@ -1,4 +1,4 @@
-// api/bling.js — Bling API integration (OAuth + fetch NF)
+// api/bling.js — Bling API integration (OAuth 2.0 + NF search)
 import { setCors, checkRateLimit } from "./lib/auth.js";
 import { getBlingClientId, getBlingClientSecret, getValidToken, blingGet, getToken, exchangeCodeForTokens } from "./lib/bling.js";
 
@@ -101,6 +101,7 @@ export default async function handler(req, res) {
       console.log("[bling] NF detail keys:", Object.keys(nfData));
       console.log("[bling] nfData.transp:", JSON.stringify(nfData.transp || nfData.transporte || null));
       console.log("[bling] nfData.volumes:", JSON.stringify(nfData.volumes || nfData.nfeVolumes || null));
+      console.log("[bling] FULL nfData:", JSON.stringify(nfData, null, 2).substring(0, 3000));
 
       const transp = nfData.transp || nfData.transporte || {};
       const enderecoTransp = transp.endereco || {};
@@ -126,6 +127,7 @@ export default async function handler(req, res) {
         numero_pedido: nfData.pedido?.numero || null,
         observacoes: nfData.obs_interna || nfData.obs || null,
         _debug_keys: Object.keys(nfData),
+        _debug_raw: JSON.stringify(nfData).substring(0, 4000),
       };
 
       return res.status(200).json(result);
