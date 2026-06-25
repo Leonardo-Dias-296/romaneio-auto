@@ -392,7 +392,7 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
         )}
       </div>
       <div style={{ borderTop: "1px solid #CBD5E1", padding: "3px 12px", display: "flex", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 8, color: "#000", fontWeight: 700 }}>SOLLAR SUL © {new Date().getFullYear()}</span>
+        <span style={{ fontSize: 8, color: "#000", fontWeight: 700 }}>FRICLIM © {new Date().getFullYear()}</span>
         <span style={{ fontSize: 8, color: "#000", fontWeight: 700 }}>Manuseie com cuidado</span>
       </div>
     </div>
