@@ -737,6 +737,7 @@ export default function App() {
         body: JSON.stringify({ numero: blingNumero.trim() }),
       });
       const data = await res.json();
+      console.log("[bling] Debug:", JSON.stringify(data, null, 2));
       if (!res.ok) {
         console.error("[bling] Erro:", data);
         throw new Error(data.erro || `Erro HTTP ${res.status}`);
