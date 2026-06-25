@@ -123,6 +123,13 @@ export default async function handler(req, res) {
       const transp = nfData.transporte || {};
       const transportador = transp.transportador || {};
 
+      // Debug: log toda a estrutura de transporte e campos de volume/peso
+      const debugNfKeys = Object.keys(nfData);
+      const debugTranspKeys = Object.keys(transp);
+      const debugVol = transp.volumes;
+      const debugPesos = { pesoBruto: nfData.pesoBruto, pesoLiquido: nfData.pesoLiquido, pesoBrutoT: transp.pesoBruto, pesoLiquidoT: transp.pesoLiquido };
+      const debugItem0 = nfData.itens?.[0] ? Object.keys(nfData.itens[0]) : [];
+
       // Tenta pegar volumes de vários campos possíveis
       const volFromTransp = transp.volumes?.length || 0;
       const volFromNfData = nfData.volumes?.length || 0;
@@ -130,6 +137,11 @@ export default async function handler(req, res) {
       const qtdVolumes = volFromTransp || volFromNfData || volFromItens;
 
       const result = {
+        _debug_nf_keys: debugNfKeys,
+        _debug_transp_keys: debugTranspKeys,
+        _debug_volumes: debugVol,
+        _debug_pesos: debugPesos,
+        _debug_item0_keys: debugItem0,
         numero_nf: nfData.numero || numStr,
         transportadora: transportador.nome || null,
         cnpj_transp: transportador.numeroDocumento || null,
