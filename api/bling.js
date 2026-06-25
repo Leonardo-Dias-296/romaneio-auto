@@ -157,39 +157,45 @@ export default async function handler(req, res) {
 
       // Busca pedido de venda vinculado à NF
       let debugPedidoFields = null;
+      let debugPedidoSearch = {};
       if (!numeroPedido) {
         try {
           const contatoId = nfEncontrada.contato?.id || nfData.contato?.id || null;
           const dataEmissao = (nfData.dataEmissao || "").substring(0, 10);
+          debugPedidoSearch = { contatoId, dataEmissao, nfNumero: nfData.numero };
           if (contatoId && dataEmissao && dataEmissao !== "0000-00-00") {
-            const pedidos = await blingGet(`/pedidos/vendas?pagina=1&limite=100&idContato=${contatoId}&dataInicial=${dataEmissao}&dataFinal=${dataEmissao}`, accessToken);
+            const pedidosUrl = `/pedidos/vendas?pagina=1&limite=100&idContato=${contatoId}&dataInicial=${dataEmissao}&dataFinal=${dataEmissao}`;
+            debugPedidoSearch.url = pedidosUrl;
+            const pedidos = await blingGet(pedidosUrl, accessToken);
+            debugPedidoSearch.pedidosCount = pedidos.data?.length || 0;
+            debugPedidoSearch.pedidosSummary = (pedidos.data || []).map(p => ({ id: p.id, numero: p.numero }));
             if (pedidos.data && pedidos.data.length > 0) {
               for (const ped of pedidos.data) {
                 try {
                   const pedDetalhe = await blingGet(`/pedidos/vendas/${ped.id}`, accessToken);
                   const pd = pedDetalhe.data || ped;
-                  debugPedidoFields = { keys: Object.keys(pd), numero: pd.numero, id: pd.id };
+                  debugPedidoFields = { keys: Object.keys(pd), numero: pd.numero, id: pd.id, pd_keys_sub: Object.keys(pd).filter(k => typeof pd[k] === "object" && pd[k] !== null) };
                   const nfRef = pd.nfe || pd.notaFiscal || null;
                   if (nfRef && String(nfRef.numero || nfRef.id || "") === String(nfData.numero || nfEncontrada.id || "")) {
                     numeroPedido = String(ped.numero || pd.numero || ped.id || "");
                     break;
                   }
-                  // Se só tem 1 pedido pra esse contato nessa data, pega direto
                   if (pedidos.data.length === 1) {
                     numeroPedido = String(ped.numero || pd.numero || ped.id || "");
                     break;
                   }
-                } catch {}
+                } catch (e) { debugPedidoSearch.detailError = e.message; }
               }
             }
           }
-        } catch {}
+        } catch (e) { debugPedidoSearch.error = e.message; }
       }
 
       const result = {
         _debug_nf_list_fields: debugNfListFields,
         _debug_nf_list_entry: JSON.stringify(nfEncontrada).substring(0, 800),
         _debug_pedido_fields: debugPedidoFields,
+        _debug_pedido_search: debugPedidoSearch,
         numero_nf: nfData.numero || numStr,
         transportadora: transportador.nome || null,
         cnpj_transp: transportador.numeroDocumento || null,
