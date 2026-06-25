@@ -123,18 +123,13 @@ export default async function handler(req, res) {
       const transp = nfData.transporte || {};
       const transportador = transp.transportador || {};
 
-      console.log("[bling] nfData keys:", Object.keys(nfData));
-      console.log("[bling] transporte:", JSON.stringify(transp).substring(0, 1000));
-      console.log("[bling] volumes:", JSON.stringify(transp.volumes));
-      console.log("[bling] nfData.volumes:", JSON.stringify(nfData.volumes));
-      console.log("[bling] nfData.nfeVolumes:", JSON.stringify(nfData.nfeVolumes));
-
-      const qtdVolumes = transp.volumes?.length || (nfData.itens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0);
+      // Tenta pegar volumes de vários campos possíveis
+      const volFromTransp = transp.volumes?.length || 0;
+      const volFromNfData = nfData.volumes?.length || 0;
+      const volFromItens = (nfData.itens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0);
+      const qtdVolumes = volFromTransp || volFromNfData || volFromItens;
 
       const result = {
-        _debug_transp_keys: Object.keys(transp),
-        _debug_volumes: transp.volumes,
-        _debug_transp_full: JSON.stringify(transp).substring(0, 500),
         numero_nf: nfData.numero || numStr,
         transportadora: transportador.nome || null,
         cnpj_transp: transportador.numeroDocumento || null,
