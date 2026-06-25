@@ -449,6 +449,7 @@ export default function App() {
   const [adminMsg, setAdminMsg] = useState("");
   const [blingNumero, setBlingNumero] = useState("");
   const [blingBusy, setBlingBusy] = useState(false);
+  const [blingProgress, setBlingProgress] = useState("");
   const [blingConnected, setBlingConnected] = useState(false);
   const [adminNovoEmail, setAdminNovoEmail] = useState("");
   const [adminNovoNome, setAdminNovoNome] = useState("");
@@ -726,56 +727,65 @@ export default function App() {
     } catch (err) { alert("Erro:\n" + err.message); setStep(1); }
   }
 
-  // ── Busca NF pelo número via API do Bling ────────────────────
+  // ── Busca NF(s) pelo número via API do Bling ────────────────────
   async function buscarNFBling() {
     if (!blingNumero.trim()) return;
+    const numeros = blingNumero.split(/[,\s;]+/).map(s => s.trim()).filter(Boolean);
+    if (numeros.length === 0) return;
+
     setBlingBusy(true);
-    try {
-      const res = await fetch("/api/bling", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ numero: blingNumero.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        console.error("[bling] Erro:", data);
-        throw new Error(data.erro || `Erro HTTP ${res.status}`);
-      }
+    let adicionadas = 0;
 
-      // Preenche dados gerais
-      const shared = {};
-      const campoPrefixo = ["transportadora", "cnpj_transp", "endereco_transp", "cidade_transp", "uf_transp", "telefone_transp", "nome_motorista", "cpf_motorista", "placa_veiculo", "data_retirada", "horario_retirada"];
-      for (const chave of campoPrefixo) {
-        if (data[chave]) shared[chave] = data[chave];
-      }
-
-      const nota = {
-        numero_nf: data.numero_nf || "",
-        produtos: data.produtos || "",
-        quantidade_volumes: data.quantidade_volumes || "",
-        numero_pedido: data.numero_pedido || "",
-        observacoes: data.observacoes || "",
-      };
-
-      // Preenche data atual se vazia
-      if (!shared.data_retirada) shared.data_retirada = new Date().toLocaleDateString("pt-BR");
-
-      // Verifica se já tem NFs no dados atual e adiciona
-      setDados(prev => {
-        const notasExistentes = prev.notas || [];
-        const merged = { ...shared };
-        for (const chave of campoPrefixo) {
-          if (!merged[chave] && prev[chave]) merged[chave] = prev[chave];
+    for (let i = 0; i < numeros.length; i++) {
+      const num = numeros[i];
+      setBlingProgress(`${i + 1}/${numeros.length} — Buscando NF ${num}...`);
+      try {
+        const res = await fetch("/api/bling", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ numero: num }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          console.error("[bling] Erro NF", num + ":", data);
+          continue;
         }
-        return { ...prev, ...merged, notas: [...notasExistentes, nota] };
-      });
-      setBlingNumero("");
-      setStep(3);
-    } catch (err) {
-      alert("Erro ao buscar NF: " + err.message);
-    } finally {
-      setBlingBusy(false);
+
+        const shared = {};
+        const campoPrefixo = ["transportadora", "cnpj_transp", "endereco_transp", "cidade_transp", "uf_transp", "telefone_transp", "nome_motorista", "cpf_motorista", "placa_veiculo", "data_retirada", "horario_retirada"];
+        for (const chave of campoPrefixo) {
+          if (data[chave]) shared[chave] = data[chave];
+        }
+
+        const nota = {
+          numero_nf: data.numero_nf || "",
+          produtos: data.produtos || "",
+          quantidade_volumes: data.quantidade_volumes || "",
+          numero_pedido: data.numero_pedido || "",
+          observacoes: data.observacoes || "",
+        };
+
+        if (!shared.data_retirada) shared.data_retirada = new Date().toLocaleDateString("pt-BR");
+
+        setDados(prev => {
+          const notasExistentes = prev.notas || [];
+          if (notasExistentes.some(n => n.numero_nf === nota.numero_nf)) return prev;
+          const merged = { ...shared };
+          for (const chave of campoPrefixo) {
+            if (!merged[chave] && prev[chave]) merged[chave] = prev[chave];
+          }
+          return { ...prev, ...merged, notas: [...notasExistentes, nota] };
+        });
+        adicionadas++;
+      } catch (err) {
+        console.error("[bling] Erro NF", num + ":", err.message);
+      }
     }
+
+    setBlingProgress("");
+    setBlingNumero("");
+    if (adicionadas > 0) setStep(3);
+    setBlingBusy(false);
   }
 
   function upd(key, val) { setDados(prev => ({ ...prev, [key]: val })); }
@@ -1007,15 +1017,19 @@ export default function App() {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 4 }}>Número da NF</div>
                     <input value={blingNumero} onChange={e => setBlingNumero(e.target.value)}
-                      placeholder="Ex: 723"
+                      placeholder="Ex: 723, 724, 725"
                       onKeyDown={e => e.key === "Enter" && buscarNFBling()}
                       style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "9px 12px", fontSize: 14, fontWeight: 500, color: "#0F172A", background: "#fff", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                    <div style={{ fontSize: 10, color: "#94A3B8", marginTop: 3 }}>Separe por vírgula, espaço ou ponto e vírgula para buscar várias</div>
                   </div>
                   <button onClick={buscarNFBling} disabled={blingBusy || !blingNumero.trim()}
                     style={{ background: blingBusy ? "#94A3B8" : "#16A34A", color: "#fff", border: "none", padding: "10px 18px", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: blingBusy ? "not-allowed" : "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
                     {blingBusy ? "Buscando..." : "Buscar"}
                   </button>
                 </div>
+                {blingProgress && (
+                  <div style={{ marginTop: 8, fontSize: 12, fontWeight: 600, color: "#2563EB" }}>{blingProgress}</div>
+                )}
                 <div style={{ marginTop: 10, display: "flex", gap: 12, alignItems: "center" }}>
                   {blingConnected ? (
                     <span style={{ fontSize: 11, color: "#16A34A", fontWeight: 700 }}>✓ Bling conectado</span>
