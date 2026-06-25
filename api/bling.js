@@ -98,25 +98,34 @@ export default async function handler(req, res) {
       const detail = await blingGet(`/nfe/${nfEncontrada.id}`, accessToken);
       const nfData = detail.data || {};
 
+      console.log("[bling] NF detail keys:", Object.keys(nfData));
+      console.log("[bling] nfData.transp:", JSON.stringify(nfData.transp || nfData.transporte || null));
+      console.log("[bling] nfData.volumes:", JSON.stringify(nfData.volumes || nfData.nfeVolumes || null));
+
+      const transp = nfData.transp || nfData.transporte || {};
+      const enderecoTransp = transp.endereco || {};
+      const motorista = transp.motorista || {};
+
       const result = {
         numero_nf: nfData.numero || String(numero),
-        transportadora: nfData.transp?.nome || null,
-        cnpj_transp: nfData.transp?.cnpj || null,
-        endereco_transp: nfData.transp?.endereco?.logradouro
-          ? `${nfData.transp.endereco.logradouro}, ${nfData.transp.endereco.numero || ""} - ${nfData.transp.endereco.bairro || ""} - ${nfData.transp.endereco.cidade || ""}/${nfData.transp.endereco.uf || ""}`
+        transportadora: transp.nome || transp.razao_social || null,
+        cnpj_transp: transp.cnpj || transp.numeroDocumento || null,
+        endereco_transp: enderecoTransp.logradouro
+          ? `${enderecoTransp.logradouro}, ${enderecoTransp.numero || ""} - ${enderecoTransp.bairro || ""} - ${enderecoTransp.cidade || ""}/${enderecoTransp.uf || ""}`
           : null,
-        cidade_transp: nfData.transp?.endereco?.cidade || null,
-        uf_transp: nfData.transp?.endereco?.uf || null,
-        telefone_transp: nfData.transp?.telefone || null,
-        nome_motorista: nfData.transp?.motorista?.nome || null,
-        cpf_motorista: nfData.transp?.motorista?.cpf || null,
-        placa_veiculo: nfData.transp?.placa || null,
+        cidade_transp: enderecoTransp.cidade || null,
+        uf_transp: enderecoTransp.uf || null,
+        telefone_transp: transp.telefone || null,
+        nome_motorista: motorista.nome || null,
+        cpf_motorista: motorista.cpf || null,
+        placa_veiculo: transp.placa || transp.veiculo?.placa || null,
         data_retirada: nfData.data_saida ? new Date(nfData.data_saida).toLocaleDateString("pt-BR") : null,
         horario_retirada: nfData.data_saida ? new Date(nfData.data_saida).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : null,
-        produtos: (nfData.itens || []).map(i => i.descricao || i.nome).join(", ") || null,
-        quantidade_volumes: nfData.volumes ? String(nfData.volumes) : (nfData.itens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0).toString(),
+        produtos: (nfData.itens || nfData.nfeItens || []).map(i => i.descricao || i.nome || i.produto?.nome).join(", ") || null,
+        quantidade_volumes: (nfData.volumes || nfData.nfeVolumes) ? String(nfData.volumes || nfData.nfeVolumes) : ((nfData.itens || nfData.nfeItens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0)).toString(),
         numero_pedido: nfData.pedido?.numero || null,
         observacoes: nfData.obs_interna || nfData.obs || null,
+        _debug_keys: Object.keys(nfData),
       };
 
       return res.status(200).json(result);
