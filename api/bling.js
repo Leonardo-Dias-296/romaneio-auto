@@ -112,7 +112,7 @@ export default async function handler(req, res) {
         nome_motorista: null,
         cpf_motorista: null,
         placa_veiculo: null,
-        data_retirada: nfData.dataEmissao ? new Date(nfData.dataEmissao + "T00:00:00").toLocaleDateString("pt-BR") : null,
+        data_retirada: new Date().toLocaleDateString("pt-BR"),
         horario_retirada: null,
         produtos: (nfData.itens || []).map(i => i.descricao).join(", ") || null,
         quantidade_volumes: transp.volumes?.length ? String(transp.volumes.length) : (nfData.itens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0).toString(),
