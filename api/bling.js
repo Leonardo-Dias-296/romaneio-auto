@@ -158,11 +158,12 @@ export default async function handler(req, res) {
         } catch {}
       }
 
-      // Busca pedido de venda vinculado à NF
+      // Busca pedido de venda vinculado à NF (cruza por produto)
       if (!numeroPedido) {
         try {
           const contatoId = nfEncontrada.contato?.id || nfData.contato?.id || null;
           const dataEmissao = (nfData.dataEmissao || "").substring(0, 10);
+          const nfProdutos = (nfData.itens || []).map(i => (i.codigo || "").toLowerCase()).filter(Boolean);
           if (contatoId && dataEmissao && dataEmissao !== "0000-00-00") {
             const pedidos = await blingGet(`/pedidos/vendas?pagina=1&limite=100&idContato=${contatoId}&dataInicial=${dataEmissao}&dataFinal=${dataEmissao}`, accessToken);
             if (pedidos.data && pedidos.data.length > 0) {
@@ -170,13 +171,10 @@ export default async function handler(req, res) {
                 try {
                   const pedDetalhe = await blingGet(`/pedidos/vendas/${ped.id}`, accessToken);
                   const pd = pedDetalhe.data || ped;
-                  const nfRef = pd.nfe || pd.notaFiscal || null;
-                  if (nfRef && String(nfRef.numero || nfRef.id || "") === String(nfData.numero || nfEncontrada.id || "")) {
-                    numeroPedido = String(ped.numero || pd.numero || ped.id || "");
-                    break;
-                  }
-                  if (pedidos.data.length === 1) {
-                    numeroPedido = String(ped.numero || pd.numero || ped.id || "");
+                  const pedProdutos = (pd.itens || []).map(i => (i.produto?.codigo || i.codigo || "").toLowerCase()).filter(Boolean);
+                  const match = nfProdutos.some(c => pedProdutos.includes(c));
+                  if (match) {
+                    numeroPedido = String(ped.numero || pd.numero || "");
                     break;
                   }
                 } catch {}
