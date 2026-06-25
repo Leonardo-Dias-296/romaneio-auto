@@ -98,36 +98,26 @@ export default async function handler(req, res) {
       const detail = await blingGet(`/nfe/${nfEncontrada.id}`, accessToken);
       const nfData = detail.data || {};
 
-      console.log("[bling] NF detail keys:", Object.keys(nfData));
-      console.log("[bling] nfData.transp:", JSON.stringify(nfData.transp || nfData.transporte || null));
-      console.log("[bling] nfData.volumes:", JSON.stringify(nfData.volumes || nfData.nfeVolumes || null));
-      console.log("[bling] FULL nfData:", JSON.stringify(nfData, null, 2).substring(0, 3000));
-
-      const transp = nfData.transp || nfData.transporte || {};
-      const enderecoTransp = transp.endereco || {};
-      const motorista = transp.motorista || {};
+      const transp = nfData.transporte || {};
+      const transportador = transp.transportador || {};
 
       const result = {
         numero_nf: nfData.numero || String(numero),
-        transportadora: transp.nome || transp.razao_social || null,
-        cnpj_transp: transp.cnpj || transp.numeroDocumento || null,
-        endereco_transp: enderecoTransp.logradouro
-          ? `${enderecoTransp.logradouro}, ${enderecoTransp.numero || ""} - ${enderecoTransp.bairro || ""} - ${enderecoTransp.cidade || ""}/${enderecoTransp.uf || ""}`
-          : null,
-        cidade_transp: enderecoTransp.cidade || null,
-        uf_transp: enderecoTransp.uf || null,
-        telefone_transp: transp.telefone || null,
-        nome_motorista: motorista.nome || null,
-        cpf_motorista: motorista.cpf || null,
-        placa_veiculo: transp.placa || transp.veiculo?.placa || null,
-        data_retirada: nfData.data_saida ? new Date(nfData.data_saida).toLocaleDateString("pt-BR") : null,
-        horario_retirada: nfData.data_saida ? new Date(nfData.data_saida).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : null,
-        produtos: (nfData.itens || nfData.nfeItens || []).map(i => i.descricao || i.nome || i.produto?.nome).join(", ") || null,
-        quantidade_volumes: (nfData.volumes || nfData.nfeVolumes) ? String(nfData.volumes || nfData.nfeVolumes) : ((nfData.itens || nfData.nfeItens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0)).toString(),
-        numero_pedido: nfData.pedido?.numero || null,
+        transportadora: transportador.nome || null,
+        cnpj_transp: transportador.numeroDocumento || null,
+        endereco_transp: null,
+        cidade_transp: null,
+        uf_transp: null,
+        telefone_transp: null,
+        nome_motorista: null,
+        cpf_motorista: null,
+        placa_veiculo: null,
+        data_retirada: nfData.dataEmissao ? new Date(nfData.dataEmissao + "T00:00:00").toLocaleDateString("pt-BR") : null,
+        horario_retirada: null,
+        produtos: (nfData.itens || []).map(i => i.descricao).join(", ") || null,
+        quantidade_volumes: transp.volumes?.length ? String(transp.volumes.length) : (nfData.itens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0).toString(),
+        numero_pedido: nfData.numeroPedidoLoja || null,
         observacoes: nfData.obs_interna || nfData.obs || null,
-        _debug_keys: Object.keys(nfData),
-        _debug_raw: JSON.stringify(nfData).substring(0, 4000),
       };
 
       return res.status(200).json(result);
