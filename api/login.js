@@ -1,4 +1,4 @@
-import { gerarToken, autenticar, setCors, checkRateLimit } from "./lib/auth.js";
+import { gerarToken, autenticar, setCors, checkRateLimit, setTokenCookie } from "./lib/auth.js";
 
 export const config = { api: { bodyParser: true, sizeLimit: "1mb" } };
 
@@ -23,7 +23,8 @@ export default async function handler(req, res) {
     if (!user) return res.status(401).json({ erro: "Email ou senha inválidos." });
 
     const token = gerarToken({ email: user.email, nome: user.nome, role: user.role });
-    return res.status(200).json({ token, user });
+    setTokenCookie(res, token);
+    return res.status(200).json({ user });
   } catch {
     return res.status(500).json({ erro: "Erro ao conectar com servidor" });
   }

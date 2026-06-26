@@ -13,6 +13,7 @@ export async function signIn(email, senha) {
   const res = await fetch("/api/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify({ email, senha }),
   });
   const data = await res.json();
@@ -20,12 +21,19 @@ export async function signIn(email, senha) {
   return data;
 }
 
-export async function getUser(token) {
+export async function getUser() {
   const res = await fetch("/api/verificar", {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
   if (!res.ok) return null;
   const data = await res.json();
   if (!data.valido) return null;
   return data.user;
+}
+
+export async function signOut() {
+  await fetch("/api/auth-logout", {
+    method: "POST",
+    credentials: "include",
+  });
 }

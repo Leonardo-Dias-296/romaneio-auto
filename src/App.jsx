@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { signUp, signIn, getUser } from "./lib/supabase.js";
+import { signUp, signIn, signOut, getUser } from "./lib/supabase.js";
 
 // Chama sempre /api/extrair — relativo ao domínio atual.
 // Em dev (vercel dev): http://localhost:3000/api/extrair
@@ -467,18 +467,12 @@ export default function App() {
 
   useEffect(() => { if (step === 3) ensureLibs().catch(() => {}); }, [step]);
 
-  // Verifica sessão via JWT no localStorage
+  // Verifica sessão via cookie HttpOnly
   useEffect(() => {
-    const token = localStorage.getItem("sb_token");
-    if (token) {
-      getUser(token).then(u => {
-        setAuthUser(u || null);
-        if (!u) localStorage.removeItem("sb_token");
-        setAuthLoading(false);
-      }).catch(() => { localStorage.removeItem("sb_token"); setAuthLoading(false); });
-    } else {
+    getUser().then(u => {
+      setAuthUser(u || null);
       setAuthLoading(false);
-    }
+    }).catch(() => { setAuthLoading(false); });
   }, []);
 
   // Verifica status do Bling (após callback OAuth)
@@ -820,7 +814,6 @@ export default function App() {
     setLoginErro(""); setLoginSucesso(""); setLoginBusy(true);
     try {
       const data = await signIn(loginEmail, loginSenha);
-      if (data.token) localStorage.setItem("sb_token", data.token);
       setAuthUser(data.user || { email: loginEmail, role: "user" });
       setLoginEmail(""); setLoginSenha("");
     } catch (e) { setLoginErro(e.message || "Email ou senha inválidos."); }
@@ -838,15 +831,14 @@ export default function App() {
   }
 
   async function handleLogout() {
-    localStorage.removeItem("sb_token");
+    await signOut();
     setAuthUser(null);
     setStep(1); setDados({});
   }
 
   // ── Admin functions ──────────────────────────────────────────
   async function adminFetch(path, opts = {}) {
-    const token = localStorage.getItem("sb_token");
-    return fetch(path, { ...opts, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts.headers } });
+    return fetch(path, { ...opts, credentials: "include", headers: { "Content-Type": "application/json", ...opts.headers } });
   }
   async function adminLoadUsers() {
     setAdminBusy(true); setAdminMsg("");

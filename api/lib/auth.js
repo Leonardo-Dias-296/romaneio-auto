@@ -71,7 +71,7 @@ export function setCors(req, res) {
   const isAllowed = origin === allowed || (isDev && (origin === "http://localhost:3000" || origin === "http://localhost:5173"));
   res.setHeader("Access-Control-Allow-Origin", isAllowed ? origin : allowed);
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
@@ -101,6 +101,51 @@ export async function autenticar(email, senha) {
   } catch {
     return null;
   }
+}
+
+// ── Cookie helpers ────────────────────────────────────────────
+export function parseCookies(req) {
+  const header = req.headers.cookie || "";
+  const cookies = {};
+  for (const pair of header.split(";")) {
+    const [key, ...rest] = pair.split("=");
+    if (key) cookies[key.trim()] = decodeURIComponent(rest.join("="));
+  }
+  return cookies;
+}
+
+export function getTokenFromCookie(req) {
+  const cookies = parseCookies(req);
+  return cookies["sb_token"] || null;
+}
+
+const IS_PROD = process.env.NODE_ENV === "production";
+
+export function setTokenCookie(res, token) {
+  const maxAge = 24 * 60 * 60; // 24h em segundos
+  const parts = [
+    `sb_token=${token}`,
+    "Path=/",
+    `Max-Age=${maxAge}`,
+    "HttpOnly",
+    "Secure",
+    "SameSite=Strict",
+  ];
+  if (IS_PROD) parts.push("Domain=.vercel.app");
+  res.setHeader("Set-Cookie", parts.join("; "));
+}
+
+export function clearTokenCookie(res) {
+  const parts = [
+    "sb_token=",
+    "Path=/",
+    "Max-Age=0",
+    "HttpOnly",
+    "Secure",
+    "SameSite=Strict",
+  ];
+  if (IS_PROD) parts.push("Domain=.vercel.app");
+  res.setHeader("Set-Cookie", parts.join("; "));
 }
 
 export { SUPABASE_URL, SUPABASE_KEY };

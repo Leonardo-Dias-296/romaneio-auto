@@ -1,4 +1,4 @@
-import { verificarToken, SUPABASE_URL, SUPABASE_KEY, setCors, checkRateLimit, getAdminEmails } from "./lib/auth.js";
+import { verificarToken, SUPABASE_URL, SUPABASE_KEY, setCors, checkRateLimit, getAdminEmails, getTokenFromCookie } from "./lib/auth.js";
 
 export const config = { api: { bodyParser: true, sizeLimit: "1mb" } };
 
@@ -12,8 +12,8 @@ export default async function handler(req, res) {
     return res.status(429).json({ erro: "Muitas requisições. Aguarde 1 minuto." });
   }
 
-  const auth = req.headers.authorization?.replace("Bearer ", "");
-  const payload = verificarToken(auth || "");
+  const token = getTokenFromCookie(req);
+  const payload = verificarToken(token || "");
   const ADMIN_EMAILS = getAdminEmails();
   if (!payload || !ADMIN_EMAILS.includes(payload.email?.toLowerCase())) {
     return res.status(401).json({ erro: "Não autorizado." });
