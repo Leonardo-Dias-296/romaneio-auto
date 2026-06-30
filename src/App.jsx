@@ -735,94 +735,69 @@ export default function App() {
     if (numeros.length === 0) return;
 
     setBlingBusy(true);
+    setBlingProgress(`Buscando ${numeros.length} nota(s)...`);
     let adicionadas = 0;
 
-    const MAX_CONCORRENCIA = 3;
-    const MAX_RETRIES = 3;
-    const RETRY_DELAYS = [1500, 3000, 6000];
+    try {
+      const res = await fetch("/api/bling", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ numeros }),
+      });
+      const data = await res.json();
 
-    async function buscarUmaNF(num, idx, total) {
-      for (let tentativa = 0; tentativa < MAX_RETRIES; tentativa++) {
-        try {
-          setBlingProgress(`${idx + 1}/${total} — Buscando NF ${num}${tentativa > 0 ? ` (tentativa ${tentativa + 1})` : ""}...`);
-          const res = await fetch("/api/bling", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ numero: num }),
-          });
-
-          if (res.status === 429) {
-            if (tentativa < MAX_RETRIES - 1) {
-              await new Promise(r => setTimeout(r, RETRY_DELAYS[tentativa]));
-              continue;
-            }
-            console.error("[bling] NF", num + ": rate limit atingido após", MAX_RETRIES, "tentativas");
-            return null;
-          }
-
-          const data = await res.json();
-          if (!res.ok) {
-            console.error("[bling] Erro NF", num + ":", data);
-            return null;
-          }
-
-          const shared = {};
-          const campoPrefixo = ["transportadora", "cnpj_transp", "endereco_transp", "cidade_transp", "uf_transp", "telefone_transp", "nome_motorista", "cpf_motorista", "placa_veiculo", "data_retirada", "horario_retirada"];
-          for (const chave of campoPrefixo) {
-            if (data[chave]) shared[chave] = data[chave];
-          }
-
-          const nota = {
-            numero_nf: data.numero_nf || "",
-            produtos: data.produtos || "",
-            quantidade_volumes: data.quantidade_volumes || "",
-            numero_pedido: data.numero_pedido || "",
-            observacoes: data.observacoes || "",
-          };
-
-          if (!shared.data_retirada) shared.data_retirada = new Date().toLocaleDateString("pt-BR");
-
-          return { shared, nota };
-        } catch (err) {
-          if (tentativa < MAX_RETRIES - 1) {
-            await new Promise(r => setTimeout(r, RETRY_DELAYS[tentativa]));
-            continue;
-          }
-          console.error("[bling] Erro NF", num + ":", err.message);
-          return null;
-        }
+      if (!res.ok) {
+        console.error("[bling] Erro:", data);
+        setBlingProgress(data.erro || "Erro ao buscar notas");
+        await new Promise(r => setTimeout(r, 2000));
+        setBlingProgress("");
+        setBlingBusy(false);
+        return;
       }
-      return null;
-    }
 
-    // Processa em lotes de MAX_CONCORRENCIA
-    for (let i = 0; i < numeros.length; i += MAX_CONCORRENCIA) {
-      const lote = numeros.slice(i, i + MAX_CONCORRENCIA);
-      const resultados = await Promise.allSettled(
-        lote.map((num, j) => buscarUmaNF(num, i + j, numeros.length))
-      );
+      // Batch response: { notas: [...] }  —  ou single: { numero_nf: ... }
+      const notas = data.notas || [data];
 
-      for (const resultado of resultados) {
-        const r = resultado.status === "fulfilled" ? resultado.value : null;
-        if (!r) continue;
+      for (const nfData of notas) {
+        const shared = {};
+        const campoPrefixo = ["transportadora", "cnpj_transp", "endereco_transp", "cidade_transp", "uf_transp", "telefone_transp", "nome_motorista", "cpf_motorista", "placa_veiculo", "data_retirada", "horario_retirada"];
+        for (const chave of campoPrefixo) {
+          if (nfData[chave]) shared[chave] = nfData[chave];
+        }
+
+        const nota = {
+          numero_nf: nfData.numero_nf || "",
+          produtos: nfData.produtos || "",
+          quantidade_volumes: nfData.quantidade_volumes || "",
+          numero_pedido: nfData.numero_pedido || "",
+          observacoes: nfData.observacoes || "",
+        };
+
+        if (!shared.data_retirada) shared.data_retirada = new Date().toLocaleDateString("pt-BR");
 
         setDados(prev => {
           const notasExistentes = prev.notas || [];
-          if (notasExistentes.some(n => n.numero_nf === r.nota.numero_nf)) return prev;
-          const merged = { ...r.shared };
-          const campoPrefixo = ["transportadora", "cnpj_transp", "endereco_transp", "cidade_transp", "uf_transp", "telefone_transp", "nome_motorista", "cpf_motorista", "placa_veiculo", "data_retirada", "horario_retirada"];
+          if (notasExistentes.some(n => n.numero_nf === nota.numero_nf)) return prev;
+          const merged = { ...shared };
           for (const chave of campoPrefixo) {
             if (!merged[chave] && prev[chave]) merged[chave] = prev[chave];
           }
-          return { ...prev, ...merged, notas: [...notasExistentes, r.nota] };
+          return { ...prev, ...merged, notas: [...notasExistentes, nota] };
         });
         adicionadas++;
       }
 
-      // Pequena pausa entre lotes para não sobrecarregar
-      if (i + MAX_CONCORRENCIA < numeros.length) {
-        await new Promise(r => setTimeout(r, 500));
+      if (adicionadas > 0) {
+        setBlingProgress(`${adicionadas} nota(s) adicionada(s) com sucesso!`);
+        await new Promise(r => setTimeout(r, 1500));
+      } else {
+        setBlingProgress("Nenhuma nota encontrada");
+        await new Promise(r => setTimeout(r, 2000));
       }
+    } catch (err) {
+      console.error("[bling] Erro geral:", err.message);
+      setBlingProgress("Erro de conexão");
+      await new Promise(r => setTimeout(r, 2000));
     }
 
     setBlingProgress("");
