@@ -74,8 +74,8 @@ async function buscarNF(numero, accessToken) {
   let pesoLiquido = nfData.pesoLiquido || null;
   let numeroPedido = nfData.numeroPedidoLoja || null;
 
-  // 4. Busca XML APENAS se precisar de dados que a API não tem
-  const precisaXml = !pesoBruto || !pesoLiquido || !numeroPedido;
+  // 4. Busca XML APENAS se precisar de peso/volumes que a API não tem
+  const precisaXml = !pesoBruto || !pesoLiquido;
   if (precisaXml && nfData.xml) {
     try {
       const xmlRes = await fetch(nfData.xml, { signal: AbortSignal.timeout(8000) });
@@ -90,37 +90,6 @@ async function buscarNF(numero, accessToken) {
         if (!pesoLiquido) {
           const plMatch = xmlText.match(/<pesoL>([\d.]+)<\/pesoL>/);
           if (plMatch) pesoLiquido = parseFloat(plMatch[1]);
-        }
-        if (!numeroPedido) {
-          const pedMatch = xmlText.match(/<xPed>(\d+)<\/xPed>/);
-          if (pedMatch) numeroPedido = pedMatch[1];
-        }
-      }
-    } catch {}
-  }
-
-  // 5. Busca pedido de venda APENAS se não tem número do pedido
-  if (!numeroPedido) {
-    try {
-      const contatoId = nfEncontrada.contato?.id || nfData.contato?.id || null;
-      const dataEmissao = (nfData.dataEmissao || "").substring(0, 10);
-      if (contatoId && dataEmissao && dataEmissao !== "0000-00-00") {
-        const pedidos = await blingGet(`/pedidos/vendas?pagina=1&limite=5&idContato=${contatoId}&dataInicial=${dataEmissao}&dataFinal=${dataEmissao}`, accessToken);
-        if (pedidos.data && pedidos.data.length > 0) {
-          for (const ped of pedidos.data) {
-            try {
-              const pedDetalhe = await blingGet(`/pedidos/vendas/${ped.id}`, accessToken);
-              const pd = pedDetalhe.data || ped;
-              const nfRef = pd.nfe || pd.notaFiscal || pd.nfes || null;
-              if (nfRef) {
-                const refNum = String(nfRef.numero || nfRef.id || nfRef.numeroNfe || "");
-                if (refNum === String(nfData.numero || "") || refNum === String(nfEncontrada.id || "")) {
-                  numeroPedido = String(pd.numero || "");
-                  break;
-                }
-              }
-            } catch {}
-          }
         }
       }
     } catch {}
