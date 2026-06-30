@@ -1,5 +1,5 @@
 // api/extrair.js — Vercel Serverless Function
-import { setCors, checkRateLimit } from "./lib/auth.js";
+import { setCors, checkRateLimit } from "./_lib/auth.js";
 
 export const config = {
   api: {

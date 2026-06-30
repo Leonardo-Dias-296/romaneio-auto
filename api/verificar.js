@@ -1,4 +1,4 @@
-import { verificarToken, setCors, getTokenFromCookie } from "./lib/auth.js";
+import { verificarToken, setCors, getTokenFromCookie } from "./_lib/auth.js";
 
 export const config = { api: { bodyParser: true, sizeLimit: "1mb" } };
 

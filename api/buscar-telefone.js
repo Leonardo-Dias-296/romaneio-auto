@@ -1,5 +1,5 @@
 // api/buscar-telefone.js — Busca telefone da transportadora
-import { setCors, checkRateLimit } from "./lib/auth.js";
+import { setCors, checkRateLimit } from "./_lib/auth.js";
 
 export const config = { api: { bodyParser: false, sizeLimit: "1mb" } };
 

@@ -1,7 +1,7 @@
 // api/bling.js — Bling API integration (OAuth 2.0 + NF search)
 import crypto from "crypto";
-import { setCors, checkRateLimit } from "./lib/auth.js";
-import { getBlingClientId, getValidToken, blingGet, getToken, exchangeCodeForTokens, deleteToken } from "./lib/bling.js";
+import { setCors, checkRateLimit } from "./_lib/auth.js";
+import { getBlingClientId, getValidToken, blingGet, getToken, exchangeCodeForTokens, deleteToken } from "./_lib/bling.js";
 
 export const config = { api: { bodyParser: false } };
 

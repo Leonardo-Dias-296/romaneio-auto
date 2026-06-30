@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_KEY, setCors, checkRateLimit } from "./lib/auth.js";
+import { SUPABASE_URL, SUPABASE_KEY, setCors, checkRateLimit } from "./_lib/auth.js";
 
 export const config = { api: { bodyParser: true, sizeLimit: "1mb" } };
 

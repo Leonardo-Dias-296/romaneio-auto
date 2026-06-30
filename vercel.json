@@ -6,9 +6,6 @@
   "functions": {
     "api/extrair.js": {
       "maxDuration": 60
-    },
-    "api/bling.js": {
-      "maxDuration": 60
     }
   },
   "headers": [

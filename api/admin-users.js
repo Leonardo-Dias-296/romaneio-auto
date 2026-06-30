@@ -1,4 +1,4 @@
-import { verificarToken, SUPABASE_URL, SUPABASE_KEY, setCors, checkRateLimit, getAdminEmails, getTokenFromCookie } from "./lib/auth.js";
+import { verificarToken, SUPABASE_URL, SUPABASE_KEY, setCors, checkRateLimit, getAdminEmails, getTokenFromCookie } from "./_lib/auth.js";
 
 export const config = { api: { bodyParser: true, sizeLimit: "1mb" } };
 
