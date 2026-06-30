@@ -174,8 +174,12 @@ export async function getValidToken() {
   return token.access_token;
 }
 
-// ── Call Bling API ─────────────────────────────────────────────
-export async function blingGet(endpoint, accessToken) {
+// ── Call Bling API with retry + timeout ────────────────────────
+const BLING_TIMEOUT = 15000;
+const MAX_RETRIES = 3;
+const RETRY_DELAYS = [1000, 2000, 4000];
+
+async function blingFetch(endpoint, accessToken) {
   const r = await fetch(`${BLING_BASE}${endpoint}`, {
     method: "GET",
     headers: {
@@ -183,10 +187,27 @@ export async function blingGet(endpoint, accessToken) {
       "enable-jwt": "1",
       Accept: "1.0",
     },
+    signal: AbortSignal.timeout(BLING_TIMEOUT),
   });
   if (!r.ok) {
     const err = await r.text();
     throw new Error(`Bling API error (${r.status}): ${err}`);
   }
   return r.json();
+}
+
+export async function blingGet(endpoint, accessToken) {
+  let lastError;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      return await blingFetch(endpoint, accessToken);
+    } catch (err) {
+      lastError = err;
+      const status = err.message?.match(/\((\d+)\)/)?.[1];
+      const retryable = !status || status === "429" || status === "500" || status === "502" || status === "503";
+      if (!retryable || attempt === MAX_RETRIES - 1) throw err;
+      await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
+    }
+  }
+  throw lastError;
 }

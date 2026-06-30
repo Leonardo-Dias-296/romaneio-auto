@@ -5,12 +5,34 @@ import { getBlingClientId, getValidToken, blingGet, getToken, exchangeCodeForTok
 
 export const config = { api: { bodyParser: false } };
 
+// ── In-memory caches ───────────────────────────────────────────
+const nfListCache = new Map();
+const NF_CACHE_TTL = 5 * 60 * 1000; // 5 min
+
+const transpCache = new Map();
+const TRANSP_CACHE_TTL = 30 * 60 * 1000; // 30 min
+
+function getCached(cache, key) {
+  const entry = cache.get(key);
+  if (entry && Date.now() - entry.ts < entry.ttl) return entry.value;
+  cache.delete(key);
+  return null;
+}
+
+function setCache(cache, key, value, ttl) {
+  if (cache.size > 200) {
+    const oldest = cache.keys().next().value;
+    cache.delete(oldest);
+  }
+  cache.set(key, { value, ts: Date.now(), ttl });
+}
+
 export default async function handler(req, res) {
   setCors(req, res);
   if (req.method === "OPTIONS") return res.status(200).end();
 
   const ip = req.headers["x-forwarded-for"] || "unknown";
-  if (!checkRateLimit(`bling:${ip}`, 10, 60000)) {
+  if (!checkRateLimit(`bling:${ip}`, 30, 60000)) {
     return res.status(429).json({ erro: "Muitas requisições. Aguarde 1 minuto." });
   }
 
@@ -101,12 +123,17 @@ export default async function handler(req, res) {
       const accessToken = await getValidToken();
       if (!accessToken) return res.status(401).json({ erro: "Token do Bling expirado. Reconecte." });
 
-      // Busca NFs e filtra pelo número
+      // Busca NFs e filtra pelo número (com cache de paginação)
       const numBusca = numStr.replace(/\D/g, "").replace(/^0+/, "") || numStr.replace(/\D/g, "");
       let nfEncontrada = null;
       for (let pagina = 1; pagina <= 10; pagina++) {
         try {
-          const listData = await blingGet(`/nfe?pagina=${pagina}&limite=100`, accessToken);
+          const cacheKey = `nf_list:${pagina}`;
+          let listData = getCached(nfListCache, cacheKey);
+          if (!listData) {
+            listData = await blingGet(`/nfe?pagina=${pagina}&limite=100`, accessToken);
+            setCache(nfListCache, cacheKey, listData, NF_CACHE_TTL);
+          }
           if (!listData.data || listData.data.length === 0) break;
           nfEncontrada = listData.data.find(n => {
             const numApi = String(n.numero || "").replace(/\D/g, "").replace(/^0+/, "");
@@ -166,14 +193,13 @@ export default async function handler(req, res) {
           const nfDescricao = ((nfData.itens || [])[0]?.descricao || "").toLowerCase().trim();
           const nfValor = (nfData.valorNota || 0);
           if (contatoId && dataEmissao && dataEmissao !== "0000-00-00") {
-            const pedidos = await blingGet(`/pedidos/vendas?pagina=1&limite=100&idContato=${contatoId}&dataInicial=${dataEmissao}&dataFinal=${dataEmissao}`, accessToken);
+            const pedidos = await blingGet(`/pedidos/vendas?pagina=1&limite=10&idContato=${contatoId}&dataInicial=${dataEmissao}&dataFinal=${dataEmissao}`, accessToken);
             if (pedidos.data && pedidos.data.length > 0) {
               let bestMatch = null;
               for (const ped of pedidos.data) {
                 try {
                   const pedDetalhe = await blingGet(`/pedidos/vendas/${ped.id}`, accessToken);
                   const pd = pedDetalhe.data || ped;
-                  // Verifica se o pedido tem NF vinculada
                   const nfRef = pd.nfe || pd.notaFiscal || pd.nfes || null;
                   if (nfRef) {
                     const refNum = String(nfRef.numero || nfRef.id || nfRef.numeroNfe || "");
@@ -182,7 +208,6 @@ export default async function handler(req, res) {
                       break;
                     }
                   }
-                  // Fallback: compara descrição do produto + valor
                   const pedDesc = ((pd.itens || [])[0]?.produto?.descricao || (pd.itens || [])[0]?.descricao || "").toLowerCase().trim();
                   const pedValor = pd.valorTotal || pd.valor || 0;
                   if (nfDescricao && pedDesc && nfDescricao.substring(0, 20) === pedDesc.substring(0, 20)) {
@@ -223,32 +248,47 @@ export default async function handler(req, res) {
         peso_liquido: pesoLiquido,
       };
 
-      // Busca dados completos da transportadora via API de contatos do Bling
+      // Busca dados completos da transportadora via API de contatos do Bling (com cache)
       const cnpjLimpo = (transportador.numeroDocumento || "").replace(/\D/g, "");
       if (cnpjLimpo && cnpjLimpo.length === 14 && accessToken) {
-        try {
-          const contatos = await blingGet(`/contatos?pagina=1&limite=100&tipoPessoa=J`, accessToken);
-          if (contatos.data) {
-            const contato = contatos.data.find(c => {
-              const doc = (c.numeroDocumento || "").replace(/\D/g, "");
-              return doc === cnpjLimpo;
-            });
-            if (contato && contato.id) {
-              const detalhe = await blingGet(`/contatos/${contato.id}`, accessToken);
-              const cd = detalhe.data || contato;
-              const end = cd.endereco?.geral || cd.endereco || {};
-              const log = end.endereco || "";
-              const num = end.numero || "";
-              const bai = end.bairro || "";
-              const cid = end.municipio || "";
-              const uf = end.uf || "";
-              if (log) result.endereco_transp = `${log}${num ? ", " + num : ""}${bai ? " - " + bai : ""}${cid ? " - " + cid : ""}${uf ? "/" + uf : ""}`;
-              if (cid) result.cidade_transp = cid;
-              if (uf) result.uf_transp = uf;
-              if (cd.telefone) result.telefone_transp = cd.telefone;
+        const transpCacheKey = `transp:${cnpjLimpo}`;
+        const cachedTransp = getCached(transpCache, transpCacheKey);
+        if (cachedTransp) {
+          result.endereco_transp = cachedTransp.endereco;
+          result.cidade_transp = cachedTransp.cidade;
+          result.uf_transp = cachedTransp.uf;
+          result.telefone_transp = cachedTransp.telefone;
+        } else {
+          try {
+            const contatos = await blingGet(`/contatos?pagina=1&limite=100&tipoPessoa=J`, accessToken);
+            if (contatos.data) {
+              const contato = contatos.data.find(c => {
+                const doc = (c.numeroDocumento || "").replace(/\D/g, "");
+                return doc === cnpjLimpo;
+              });
+              if (contato && contato.id) {
+                const detalhe = await blingGet(`/contatos/${contato.id}`, accessToken);
+                const cd = detalhe.data || contato;
+                const end = cd.endereco?.geral || cd.endereco || {};
+                const log = end.endereco || "";
+                const num = end.numero || "";
+                const bai = end.bairro || "";
+                const cid = end.municipio || "";
+                const uf = end.uf || "";
+                if (log) result.endereco_transp = `${log}${num ? ", " + num : ""}${bai ? " - " + bai : ""}${cid ? " - " + cid : ""}${uf ? "/" + uf : ""}`;
+                if (cid) result.cidade_transp = cid;
+                if (uf) result.uf_transp = uf;
+                if (cd.telefone) result.telefone_transp = cd.telefone;
+                setCache(transpCache, transpCacheKey, {
+                  endereco: result.endereco_transp,
+                  cidade: result.cidade_transp,
+                  uf: result.uf_transp,
+                  telefone: result.telefone_transp,
+                }, TRANSP_CACHE_TTL);
+              }
             }
-          }
-        } catch {}
+          } catch {}
+        }
       }
 
       // Fallback: busca endereço e telefone via ReceitaWS
