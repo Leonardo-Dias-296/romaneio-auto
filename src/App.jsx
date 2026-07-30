@@ -108,32 +108,28 @@ async function generateEtiquetasPdf(labels, dados) {
     const data = dados.data_retirada || "—";
     const transp = dados.transportadora || "—";
     const produtos = l.nota.produtos || dados.produtos || "Carga geral";
-    const pedido = l.nota.numero_pedido || dados.numero_pedido || "";
     const nomeDest = dados.nome_destinatario || "";
-    const endDest = dados.endereco_destinatario || "";
-    const nomeDestFs = nomeDest.length > 35 ? 8 : nomeDest.length > 25 ? 9 : 10;
-    const endDestFs = endDest.length > 50 ? 7 : endDest.length > 35 ? 8 : 8;
-    const transpFs = transp.length > 40 ? 7 : transp.length > 30 ? 8 : 9;
+    const transpFs = transp.length > 38 ? 8 : transp.length > 28 ? 9 : 10;
+    const nomeDestFs = nomeDest.length > 35 ? 9 : nomeDest.length > 25 ? 10 : 11;
 
     wrapper.innerHTML = `
       <div style="width:378px;height:189px;background:#fff;border:2px solid #000;display:flex;flex-direction:column;overflow:hidden;font-family:Arial,sans-serif;">
-        <div style="border-bottom:2px solid #000;padding:4px 10px;display:flex;justify-content:space-between;align-items:center;">
-          <div><div style="font-weight:900;font-size:14px;color:#000;">FRICLIM</div><div style="font-size:7px;color:#000;font-weight:700;letter-spacing:0.5px;">REMETENTE: SOLLAR SUL ENERGIA SOLAR</div></div>
-          <div style="border:2px solid #000;border-radius:4px;padding:2px 8px;text-align:center;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">VOLUME</div><div style="font-weight:900;font-size:20px;color:#000;line-height:1;">${escapeHtml(String(vol))}<span style="font-size:11px;font-weight:700;color:#000;">/${escapeHtml(String(total))}</span></div></div>
+        <div style="border-bottom:2px solid #000;padding:5px 10px;display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="font-weight:900;font-size:15px;color:#000;">FRICLIM</div><div style="font-size:7px;color:#000;font-weight:700;letter-spacing:0.5px;">REMETENTE: SOLLAR SUL ENERGIA SOLAR</div></div>
+          <div style="border:2px solid #000;border-radius:4px;padding:3px 8px;text-align:center;"><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">VOLUME</div><div style="font-weight:900;font-size:22px;color:#000;line-height:1;">${escapeHtml(String(vol))}<span style="font-size:12px;font-weight:700;color:#000;">/${escapeHtml(String(total))}</span></div></div>
         </div>
-        <div style="flex:1;padding:4px 10px;display:flex;flex-direction:column;gap:1px;overflow:hidden;">
-          <div style="display:flex;justify-content:space-between;border-bottom:1px solid #CBD5E1;padding-bottom:2px;">
-            <div style="min-width:0;flex:1;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:0.5px;">NF-e</div><div style="font-size:12px;font-weight:900;color:#000;">${escapeHtml(nf)}</div></div>
-            <div style="text-align:right;flex-shrink:0;margin-left:6px;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:0.5px;">Data</div><div style="font-size:9px;font-weight:800;color:#000;">${escapeHtml(data)}</div></div>
+        <div style="flex:1;padding:5px 10px;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="display:flex;justify-content:space-between;border-bottom:1px solid #CBD5E1;padding-bottom:3px;">
+            <div><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:0.5px;">NF-e</div><div style="font-size:13px;font-weight:900;color:#000;">${escapeHtml(nf)}</div></div>
+            <div style="text-align:right;flex-shrink:0;margin-left:8px;"><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:0.5px;">Data</div><div style="font-size:10px;font-weight:800;color:#000;">${escapeHtml(data)}</div></div>
           </div>
-          ${nomeDest ? `<div style="border-bottom:1px solid #CBD5E1;padding-bottom:2px;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:0.5px;">Para</div><div style="font-size:${nomeDestFs}px;font-weight:800;color:#000;overflow:hidden;word-break:break-word;">${escapeHtml(nomeDest)}</div>${endDest ? `<div style="font-size:${endDestFs}px;font-weight:600;color:#333;overflow:hidden;word-break:break-word;line-height:1.2;">${escapeHtml(endDest)}</div>` : ""}</div>` : ""}
-          <div style="min-width:0;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:0.5px;">Transportadora</div><div style="font-size:${transpFs}px;font-weight:800;color:#000;overflow:hidden;word-break:break-word;">${escapeHtml(transp)}</div></div>
-          <div style="flex:1;min-width:0;overflow:hidden;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:0.5px;">Produto(s)</div><div style="font-size:9px;font-weight:700;color:#000;line-height:1.2;overflow:hidden;word-break:break-word;">${escapeHtml(produtos)}</div></div>
-          ${pedido ? `<div style="min-width:0;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:0.5px;">Pedido</div><div style="font-size:9px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(pedido)}</div></div>` : ""}
+          <div style="border-bottom:1px solid #CBD5E1;padding:3px 0;"><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:0.5px;">Cliente</div><div style="font-size:${nomeDestFs}px;font-weight:800;color:#000;overflow:hidden;word-break:break-word;">${escapeHtml(nomeDest) || "—"}</div></div>
+          <div style="border-bottom:1px solid #CBD5E1;padding:3px 0;"><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:0.5px;">Transportadora</div><div style="font-size:${transpFs}px;font-weight:800;color:#000;overflow:hidden;word-break:break-word;">${escapeHtml(transp)}</div></div>
+          <div style="flex:1;padding-top:3px;overflow:hidden;"><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:0.5px;">Produto(s)</div><div style="font-size:10px;font-weight:700;color:#000;line-height:1.3;overflow:hidden;word-break:break-word;">${escapeHtml(produtos)}</div></div>
         </div>
         <div style="border-top:1px solid #CBD5E1;padding:2px 10px;display:flex;justify-content:space-between;">
-          <span style="font-size:6px;color:#000;font-weight:700;">FRICLIM © ${new Date().getFullYear()}</span>
-          <span style="font-size:6px;color:#000;font-weight:700;">Manuseie com cuidado</span>
+          <span style="font-size:7px;color:#000;font-weight:700;">FRICLIM © ${new Date().getFullYear()}</span>
+          <span style="font-size:7px;color:#000;font-weight:700;">Manuseie com cuidado</span>
         </div>
       </div>`;
     container.appendChild(wrapper);
@@ -365,61 +361,50 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
     ? { width: 378, height: 189, fontFamily: "Arial, sans-serif" }
     : { width: 378, height: 189, fontFamily: "Arial, sans-serif" };
   const nomeDest = dados.nome_destinatario || "";
-  const endDest = dados.endereco_destinatario || "";
-  const nomeDestFont = nomeDest.length > 35 ? 8 : nomeDest.length > 25 ? 9 : 10;
-  const endDestFont = endDest.length > 50 ? 7 : endDest.length > 35 ? 8 : 8;
   const transp = dados.transportadora || "";
-  const transpFont = transp.length > 40 ? 7 : transp.length > 30 ? 8 : 9;
+  const transpFont = transp.length > 38 ? 8 : transp.length > 28 ? 9 : 10;
+  const nomeDestFont = nomeDest.length > 35 ? 9 : nomeDest.length > 25 ? 10 : 11;
   return (
     <div style={{ ...size, background: "#fff", border: "2px solid #000", borderRadius: forCapture ? 0 : 6, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-      <div style={{ borderBottom: "2px solid #000", padding: "4px 10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ borderBottom: "2px solid #000", padding: "5px 10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ fontWeight: 900, fontSize: 14, color: "#000" }}>FRICLIM</div>
+          <div style={{ fontWeight: 900, fontSize: 15, color: "#000" }}>FRICLIM</div>
           <div style={{ fontSize: 7, color: "#000", fontWeight: 700, letterSpacing: 0.5 }}>REMETENTE: SOLLAR SUL ENERGIA SOLAR</div>
         </div>
-        <div style={{ border: "2px solid #000", borderRadius: 4, padding: "2px 8px", textAlign: "center" }}>
-          <div style={{ fontSize: 6, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1 }}>VOLUME</div>
-          <div style={{ fontWeight: 900, fontSize: 20, color: "#000", lineHeight: 1 }}>
-            {volumeInNota + 1}<span style={{ fontSize: 11, fontWeight: 700, color: "#000" }}>/{totalVolumesNota}</span>
+        <div style={{ border: "2px solid #000", borderRadius: 4, padding: "3px 8px", textAlign: "center" }}>
+          <div style={{ fontSize: 7, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1 }}>VOLUME</div>
+          <div style={{ fontWeight: 900, fontSize: 22, color: "#000", lineHeight: 1 }}>
+            {volumeInNota + 1}<span style={{ fontSize: 12, fontWeight: 700, color: "#000" }}>/{totalVolumesNota}</span>
           </div>
         </div>
       </div>
-      <div style={{ flex: 1, padding: "4px 10px", display: "flex", flexDirection: "column", gap: 1, overflow: "hidden" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #CBD5E1", paddingBottom: 2 }}>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 6, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 0.5 }}>NF-e</div>
-            <div style={{ fontSize: 12, fontWeight: 900, color: "#000" }}>{nota.numero_nf || "—"}</div>
+      <div style={{ flex: 1, padding: "5px 10px", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #CBD5E1", paddingBottom: 3 }}>
+          <div>
+            <div style={{ fontSize: 7, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 0.5 }}>NF-e</div>
+            <div style={{ fontSize: 13, fontWeight: 900, color: "#000" }}>{nota.numero_nf || "—"}</div>
           </div>
-          <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 6 }}>
-            <div style={{ fontSize: 6, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 0.5 }}>Data</div>
-            <div style={{ fontSize: 9, fontWeight: 800, color: "#000" }}>{dados.data_retirada || "—"}</div>
+          <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 8 }}>
+            <div style={{ fontSize: 7, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 0.5 }}>Data</div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: "#000" }}>{dados.data_retirada || "—"}</div>
           </div>
         </div>
-        {nomeDest ? (
-          <div style={{ borderBottom: "1px solid #CBD5E1", paddingBottom: 2 }}>
-            <div style={{ fontSize: 6, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 0.5 }}>Para</div>
-            <div style={{ fontSize: nomeDestFont, fontWeight: 800, color: "#000", overflow: "hidden", wordBreak: "break-word" }}>{nomeDest}</div>
-            {endDest && <div style={{ fontSize: endDestFont, fontWeight: 600, color: "#333", overflow: "hidden", wordBreak: "break-word", lineHeight: 1.2 }}>{endDest}</div>}
-          </div>
-        ) : null}
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 6, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 0.5 }}>Transportadora</div>
+        <div style={{ borderBottom: "1px solid #CBD5E1", padding: "3px 0" }}>
+          <div style={{ fontSize: 7, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 0.5 }}>Cliente</div>
+          <div style={{ fontSize: nomeDestFont, fontWeight: 800, color: "#000", overflow: "hidden", wordBreak: "break-word" }}>{nomeDest || "—"}</div>
+        </div>
+        <div style={{ borderBottom: "1px solid #CBD5E1", padding: "3px 0" }}>
+          <div style={{ fontSize: 7, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 0.5 }}>Transportadora</div>
           <div style={{ fontSize: transpFont, fontWeight: 800, color: "#000", overflow: "hidden", wordBreak: "break-word" }}>{transp || "—"}</div>
         </div>
-        <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
-          <div style={{ fontSize: 6, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 0.5 }}>Produto(s)</div>
-          <div style={{ fontSize: 9, fontWeight: 700, color: "#000", lineHeight: 1.2, overflow: "hidden", wordBreak: "break-word" }}>{nota.produtos || "Carga geral"}</div>
+        <div style={{ flex: 1, paddingTop: 3, overflow: "hidden" }}>
+          <div style={{ fontSize: 7, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 0.5 }}>Produto(s)</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#000", lineHeight: 1.3, overflow: "hidden", wordBreak: "break-word" }}>{nota.produtos || "Carga geral"}</div>
         </div>
-        {nota.numero_pedido && (
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 6, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 0.5 }}>Pedido</div>
-            <div style={{ fontSize: 9, fontWeight: 700, color: "#000", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nota.numero_pedido}</div>
-          </div>
-        )}
       </div>
       <div style={{ borderTop: "1px solid #CBD5E1", padding: "2px 10px", display: "flex", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 6, color: "#000", fontWeight: 700 }}>FRICLIM © {new Date().getFullYear()}</span>
-        <span style={{ fontSize: 6, color: "#000", fontWeight: 700 }}>Manuseie com cuidado</span>
+        <span style={{ fontSize: 7, color: "#000", fontWeight: 700 }}>FRICLIM © {new Date().getFullYear()}</span>
+        <span style={{ fontSize: 7, color: "#000", fontWeight: 700 }}>Manuseie com cuidado</span>
       </div>
     </div>
   );
