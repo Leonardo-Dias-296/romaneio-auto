@@ -84,6 +84,43 @@ async function elementToOutput(element, opts = {}) {
   pdf.addImage(dataUrl, "PNG", x, y, contentW, contentH, "", "FAST");
   return { blob: pdf.output("blob"), dataUrl };
 }
+
+function getQrUrl(chaveAcesso, urlChave) {
+  if (!chaveAcesso) return null;
+  const UF_CONSULTA = {
+    "11": "https://www.sefaz.ro.gov.br/NFe/ConsultaNFe/Consulta.aspx",
+    "12": "https://www.sefaz.ac.gov.br/nfe/consulta_nfe.php",
+    "13": "https://www.sefaz.am.gov.br/nfe/consultaNFe.aspx",
+    "14": "https://www.sefaz.rr.gov.br/nfe/consultaNFe.aspx",
+    "15": "https://www.sefaz.pa.gov.br/nfe/consultaNFe.aspx",
+    "16": "https://www.sefaz.ap.gov.br/nfe/consultaNFe.aspx",
+    "17": "https://www.sefaz.to.gov.br/nfe/consultaNFe.aspx",
+    "21": "https://www.sefaz.ma.gov.br/nfe/consultaNFe.aspx",
+    "22": "https://www.sefaz.pi.gov.br/nfe/consultaNFe.aspx",
+    "23": "https://www.sefaz.ce.gov.br/nfe/consultaNFe.aspx",
+    "24": "https://www.sefaz.rn.gov.br/nfe/consultaNFe.aspx",
+    "25": "https://www.sefaz.pb.gov.br/nfe/consultaNFe.aspx",
+    "26": "https://www.sefaz.pe.gov.br/nfe/consultaNFe.aspx",
+    "27": "https://www.sefaz.al.gov.br/nfe/consultaNFe.aspx",
+    "28": "https://www.sefaz.se.gov.br/nfe/consultaNFe.aspx",
+    "29": "https://www.sefaz.ba.gov.br/nfe/consultaNFe.aspx",
+    "31": "https://www.nfe.fazenda.gov.br/portal/consulta.aspx",
+    "32": "https://www.sefaz.es.gov.br/nfe/consultaNFe.aspx",
+    "33": "https://www.nfe.fazenda.gov.br/portal/consulta.aspx",
+    "35": "https://www.nfe.fazenda.sp.gov.br/ConsultaNFe/consulta/publica/ConsultarNFe.aspx",
+    "41": "https://www.nfe.fazenda.pr.gov.br/nfe/consultaNFe",
+    "42": "https://www.sefaz.sc.gov.br/nfe/consultaNFe.aspx",
+    "43": "https://dfe-portal.svrs.rs.gov.br/Dfe/ConsultaPublicaDfe",
+    "50": "https://www.sefaz.ms.gov.br/nfe/consultaNFe",
+    "51": "https://www.sefaz.mt.gov.br/nfe/consultanfe",
+    "52": "https://www.sefaz.go.gov.br/nfe/consultaNFe.aspx",
+    "53": "https://www.nfe.fazenda.gov.br/portal/consulta.aspx",
+  };
+  if (urlChave) return `${urlChave}${chaveAcesso}`;
+  const ufCode = String(chaveAcesso).substring(0, 2);
+  return UF_CONSULTA[ufCode] || "https://www.nfe.fazenda.gov.br/portal/consulta.aspx";
+}
+
 // ── PDF de etiquetas: 1 página por etiqueta (100x50mm) ──────────
 async function generateEtiquetasPdf(labels, dados) {
   await ensureLibs();
@@ -118,9 +155,7 @@ async function generateEtiquetasPdf(labels, dados) {
     // Gera QR code como data URL
     let qrImgHtml = "";
     if (dados.chave_acesso) {
-      const qrUrl = dados.url_chave
-        ? `${dados.url_chave}${dados.chave_acesso}`
-        : `https://www.nfe.fazenda.gov.br/portal/consultanfe.aspx?chave=${dados.chave_acesso}`;
+      const qrUrl = getQrUrl(dados.chave_acesso, dados.url_chave);
       try {
         const qrDataUrl = await QRCode.toDataURL(
           qrUrl,
@@ -426,7 +461,7 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
           {dados.chave_acesso && (
             <div style={{ flexShrink: 0, display: "flex", alignItems: "flex-end" }}>
               <QRCodeSVG
-                value={dados.url_chave ? `${dados.url_chave}${dados.chave_acesso}` : `https://www.nfe.fazenda.gov.br/portal/consultanfe.aspx?chave=${dados.chave_acesso}`}
+                value={getQrUrl(dados.chave_acesso, dados.url_chave) || ""}
                 size={50}
                 level="M"
                 includeMargin={false}
