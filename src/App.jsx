@@ -121,7 +121,7 @@ async function generateEtiquetasPdf(labels, dados) {
             <div style="min-width:0;flex:1;"><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">Nota Fiscal</div><div style="font-size:13px;font-weight:900;color:#000;">NF-e ${escapeHtml(nf)}</div></div>
             <div style="text-align:right;flex-shrink:0;margin-left:8px;"><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">Data</div><div style="font-size:11px;font-weight:800;color:#000;">${escapeHtml(data)}</div></div>
           </div>
-          <div style="min-width:0;"><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">Transportadora</div><div style="font-size:10px;font-weight:800;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(transp)}</div></div>
+          <div style="min-width:0;"><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">Transportadora</div><div style="font-size:${transp.length > 40 ? 7 : transp.length > 30 ? 8 : 9}px;font-weight:800;color:#000;overflow:hidden;word-break:break-word;">${escapeHtml(transp)}</div></div>
           <div style="flex:1;min-width:0;overflow:hidden;"><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">Produto(s)</div><div style="font-size:10px;font-weight:700;color:#000;line-height:1.3;overflow:hidden;word-break:break-word;">${escapeHtml(produtos)}</div></div>
           ${pedido ? `<div style="min-width:0;"><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">Pedido</div><div style="font-size:10px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(pedido)}</div></div>` : ""}
         </div>
@@ -385,7 +385,7 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 7, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1 }}>Transportadora</div>
-          <div style={{ fontSize: 10, fontWeight: 800, color: "#000", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{dados.transportadora || "—"}</div>
+          <div style={{ fontSize: (dados.transportadora || "").length > 40 ? 7 : (dados.transportadora || "").length > 30 ? 8 : 9, fontWeight: 800, color: "#000", overflow: "hidden", wordBreak: "break-word" }}>{dados.transportadora || "—"}</div>
         </div>
         <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
           <div style={{ fontSize: 7, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1 }}>Produto(s)</div>
