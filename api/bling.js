@@ -69,6 +69,11 @@ async function buscarNF(numero, accessToken) {
   const transp = nfData.transporte || {};
   const transportador = transp.transportador || {};
 
+  // Log debug para entender a estrutura do destinatário
+  const cliDebug = nfData.cliente || nfData.destinatario || {};
+  console.log("[bling] nfData keys:", Object.keys(nfData).join(", "));
+  console.log("[bling] cliente:", JSON.stringify(cliDebug).substring(0, 300));
+
   let qtdVolumes = (nfData.itens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0);
   let pesoBruto = nfData.pesoBruto || null;
   let pesoLiquido = nfData.pesoLiquido || null;
@@ -114,13 +119,13 @@ async function buscarNF(numero, accessToken) {
     observacoes: nfData.obs_interna || nfData.obs || null,
     peso_bruto: pesoBruto,
     peso_liquido: pesoLiquido,
-    nome_destinatario: nfData.cliente?.nome || nfData.destinatario?.nome || null,
+    nome_destinatario: nfData.cliente?.nome || nfData.destinatario?.nome || nfData.cliente?.razaoSocial || null,
     endereco_destinatario: null,
   };
 
   // Extrai endereço do destinatário
   const cli = nfData.cliente || nfData.destinatario || {};
-  const endCli = cli.endereco?.geral || cli.endereco || {};
+  const endCli = cli.endereco?.geral || cli.endereco || cli.enderecoEntrega || {};
   if (endCli) {
     const log = endCli.endereco || "";
     const num = endCli.numero || "";
