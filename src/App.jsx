@@ -114,6 +114,7 @@ async function generateEtiquetasPdf(labels, dados) {
     const transp = dados.transportadora || "—";
     const produtos = l.nota.produtos || dados.produtos || "Carga geral";
     const nomeDest = dados.nome_destinatario || "";
+    const endDest = dados.endereco_destinatario || "";
     const transpFs = transp.length > 35 ? 8 : 9;
     const nomeDestFs = nomeDest.length > 30 ? 9 : 10;
     const prodFs = produtos.length > 50 ? 8 : 9;
@@ -141,7 +142,7 @@ async function generateEtiquetasPdf(labels, dados) {
             <div><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;">NF-e</div><div style="font-size:12px;font-weight:900;color:#000;">${escapeHtml(nf)}</div></div>
             <div style="text-align:right;flex-shrink:0;margin-left:8px;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;">Data</div><div style="font-size:9px;font-weight:800;color:#000;">${escapeHtml(data)}</div></div>
           </div>
-          <div style="padding-bottom:1px;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;">Cliente</div><div style="font-size:${nomeDestFs}px;font-weight:800;color:#000;">${escapeHtml(nomeDest) || "—"}</div></div>
+          <div style="padding-bottom:1px;"><div style="font-size:6px;font-weight:900;color:#000;">Destinatário: <span style="font-size:${nomeDestFs}px;font-weight:800;">${escapeHtml(nomeDest) || "—"}</span></div>${endDest ? `<div style="font-size:5px;color:#000;font-weight:700;">${escapeHtml(endDest)}</div>` : ""}</div>
           <div style="padding-bottom:1px;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;">Transportadora</div><div style="font-size:${transpFs}px;font-weight:800;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(transp)}</div></div>
           <div style="flex:1;overflow:hidden;display:flex;gap:4px;">
             <div style="flex:1;overflow:hidden;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;">Produto(s)</div><div style="font-size:${prodFs}px;font-weight:700;color:#000;line-height:1.2;">${escapeHtml(produtos)}</div></div>
@@ -380,6 +381,7 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
 function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
   const W = 378, H = 189;
   const nomeDest = dados.nome_destinatario || "";
+  const endDest = dados.endereco_destinatario || "";
   const transp = dados.transportadora || "";
   const produtos = (nota.produtos || "Carga geral");
   const transpFont = transp.length > 35 ? 8 : 9;
@@ -411,8 +413,8 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
           </div>
         </div>
         <div style={{ paddingBottom: 1 }}>
-          <div style={{ fontSize: 6, fontWeight: 900, color: "#000", textTransform: "uppercase" }}>Cliente</div>
-          <div style={{ fontSize: nomeDestFont, fontWeight: 800, color: "#000" }}>{nomeDest || "—"}</div>
+          <div style={{ fontSize: 6, fontWeight: 900, color: "#000" }}>Destinatário: <span style={{ fontSize: nomeDestFont, fontWeight: 800 }}>{nomeDest || "—"}</span></div>
+          {endDest && <div style={{ fontSize: 5, color: "#000", fontWeight: 700 }}>{endDest}</div>}
         </div>
         <div style={{ paddingBottom: 1 }}>
           <div style={{ fontSize: 6, fontWeight: 900, color: "#000", textTransform: "uppercase" }}>Transportadora</div>
