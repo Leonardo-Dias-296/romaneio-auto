@@ -71,8 +71,8 @@ async function buscarNF(numero, accessToken) {
 
   // Log debug para entender a estrutura do destinatário
   console.log("[bling] nfData top keys:", Object.keys(nfData).join(", "));
-  console.log("[bling] nfData.cliente:", JSON.stringify(nfData.cliente || "NOT_FOUND").substring(0, 500));
-  console.log("[bling] nfData.destinatario:", JSON.stringify(nfData.destinatario || "NOT_FOUND").substring(0, 500));
+  console.log("[bling] nfData.contato:", JSON.stringify(nfData.contato || "NOT_FOUND").substring(0, 500));
+  console.log("[bling] nfData.chaveAcesso:", nfData.chaveAcesso || "NOT_FOUND");
 
   let qtdVolumes = (nfData.itens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0);
   let pesoBruto = nfData.pesoBruto || null;
@@ -119,14 +119,14 @@ async function buscarNF(numero, accessToken) {
     observacoes: nfData.obs_interna || nfData.obs || null,
     peso_bruto: pesoBruto,
     peso_liquido: pesoLiquido,
-    nome_destinatario: nfData.cliente?.nome || nfData.destinatario?.nome || nfData.cliente?.razaoSocial || null,
+    nome_destinatario: nfData.contato?.nome || null,
     endereco_destinatario: null,
     chave_acesso: nfData.chaveAcesso || null,
   };
 
-  // Extrai endereço do destinatário
-  const cli = nfData.cliente || nfData.destinatario || {};
-  const endCli = cli.endereco?.geral || cli.endereco || cli.enderecoEntrega || {};
+  // Extrai endereço do destinatário (contato)
+  const cli = nfData.contato || {};
+  const endCli = cli.endereco || {};
   if (endCli) {
     const log = endCli.endereco || "";
     const num = endCli.numero || "";

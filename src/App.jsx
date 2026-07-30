@@ -121,9 +121,9 @@ async function generateEtiquetasPdf(labels, dados) {
       try {
         const qrDataUrl = await QRCode.toDataURL(
           `https://www.nfe.fazenda.gov.br/portal/consultanfe.aspx?chave=${dados.chave_acesso}`,
-          { width: 70, margin: 0, color: { dark: "#000000", light: "#ffffff" } }
+          { width: 100, margin: 0, color: { dark: "#000000", light: "#ffffff" } }
         );
-        qrImgHtml = `<div style="flex-shrink:0;display:flex;align-items:flex-end;"><img src="${qrDataUrl}" style="width:35px;height:35px;" /></div>`;
+        qrImgHtml = `<div style="flex-shrink:0;display:flex;align-items:flex-end;"><img src="${qrDataUrl}" style="width:50px;height:50px;" /></div>`;
       } catch {}
     }
 
@@ -424,7 +424,7 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
             <div style={{ flexShrink: 0, display: "flex", alignItems: "flex-end" }}>
               <QRCodeSVG
                 value={`https://www.nfe.fazenda.gov.br/portal/consultanfe.aspx?chave=${dados.chave_acesso}`}
-                size={35}
+                size={50}
                 level="M"
                 includeMargin={false}
               />
