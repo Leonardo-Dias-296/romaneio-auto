@@ -118,9 +118,12 @@ async function generateEtiquetasPdf(labels, dados) {
     // Gera QR code como data URL
     let qrImgHtml = "";
     if (dados.chave_acesso) {
+      const qrUrl = dados.url_chave
+        ? `${dados.url_chave}${dados.chave_acesso}`
+        : `https://www.nfe.fazenda.gov.br/portal/consultanfe.aspx?chave=${dados.chave_acesso}`;
       try {
         const qrDataUrl = await QRCode.toDataURL(
-          `https://www.nfe.fazenda.gov.br/portal/consultanfe.aspx?chave=${dados.chave_acesso}`,
+          qrUrl,
           { width: 100, margin: 0, color: { dark: "#000000", light: "#ffffff" } }
         );
         qrImgHtml = `<div style="flex-shrink:0;display:flex;align-items:flex-end;"><img src="${qrDataUrl}" style="width:50px;height:50px;" /></div>`;
@@ -423,7 +426,7 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
           {dados.chave_acesso && (
             <div style={{ flexShrink: 0, display: "flex", alignItems: "flex-end" }}>
               <QRCodeSVG
-                value={`https://www.nfe.fazenda.gov.br/portal/consultanfe.aspx?chave=${dados.chave_acesso}`}
+                value={dados.url_chave ? `${dados.url_chave}${dados.chave_acesso}` : `https://www.nfe.fazenda.gov.br/portal/consultanfe.aspx?chave=${dados.chave_acesso}`}
                 size={50}
                 level="M"
                 includeMargin={false}
@@ -713,7 +716,7 @@ export default function App() {
       const allNotas = [];
       let shared = {};
 
-      const campoPrefixo = ["transportadora", "cnpj_transp", "endereco_transp", "cidade_transp", "uf_transp", "telefone_transp", "nome_motorista", "cpf_motorista", "placa_veiculo", "data_retirada", "horario_retirada", "nome_destinatario", "endereco_destinatario", "chave_acesso"];
+      const campoPrefixo = ["transportadora", "cnpj_transp", "endereco_transp", "cidade_transp", "uf_transp", "telefone_transp", "nome_motorista", "cpf_motorista", "placa_veiculo", "data_retirada", "horario_retirada", "nome_destinatario", "endereco_destinatario", "chave_acesso", "url_chave"];
 
       for (let i = 0; i < files.length; i++) {
         setStatusMsg(`Processando arquivo ${i + 1}/${files.length}...`);
@@ -794,7 +797,7 @@ export default function App() {
 
       for (const nfData of notas) {
         const shared = {};
-      const campoPrefixo = ["transportadora", "cnpj_transp", "endereco_transp", "cidade_transp", "uf_transp", "telefone_transp", "nome_motorista", "cpf_motorista", "placa_veiculo", "data_retirada", "horario_retirada", "nome_destinatario", "endereco_destinatario", "chave_acesso"];
+      const campoPrefixo = ["transportadora", "cnpj_transp", "endereco_transp", "cidade_transp", "uf_transp", "telefone_transp", "nome_motorista", "cpf_motorista", "placa_veiculo", "data_retirada", "horario_retirada", "nome_destinatario", "endereco_destinatario", "chave_acesso", "url_chave"];
         for (const chave of campoPrefixo) {
           if (nfData[chave]) shared[chave] = nfData[chave];
         }

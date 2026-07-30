@@ -80,6 +80,7 @@ async function buscarNF(numero, accessToken) {
   let pesoLiquido = nfData.pesoLiquido || null;
   let numeroPedido = nfData.numeroPedidoLoja || null;
   let chaveAcesso = nfData.chaveAcesso || null;
+  let urlChaveXml = null;
 
   // 4. Busca XML para peso/volumes/chaveAcesso
   if (nfData.xml) {
@@ -102,6 +103,9 @@ async function buscarNF(numero, accessToken) {
           const chMatch = xmlText.match(/<chNFe>(\d{44})<\/chNFe>/);
           if (chMatch) chaveAcesso = chMatch[1];
         }
+        // Extrai urlChave do XML (tag <urlChave> dentro de <infNFeSupl>)
+        const urlChaveMatch = xmlText.match(/<urlChave>(.*?)<\/urlChave>/);
+        if (urlChaveMatch) urlChaveXml = urlChaveMatch[1].trim();
       }
     } catch {}
   }
@@ -128,6 +132,7 @@ async function buscarNF(numero, accessToken) {
     nome_destinatario: nfData.contato?.nome || null,
     endereco_destinatario: null,
     chave_acesso: chaveAcesso,
+    url_chave: urlChaveXml,
   };
 
   // Extrai endereço do destinatário (contato)
