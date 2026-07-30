@@ -27,7 +27,8 @@ const PROMPT = `Você é um extrator de dados de notas fiscais brasileiras. Anal
   "produtos": "descrição dos produtos",
   "quantidade_volumes": "quantidade total de volumes (número)",
   "nome_destinatario": "nome ou razão social do destinatário/cliente (para quem é a mercadoria)",
-  "endereco_destinatario": "endereço completo do destinatário (rua, número, bairro, cidade/UF)"
+  "endereco_destinatario": "endereço completo do destinatário (rua, número, bairro, cidade/UF)",
+  "chave_acesso": "chave de acesso da NF-e (chave com 44 dígitos, geralmente aparece no rodapé ou no código de barras)"
 }
 
 Responda APENAS com JSON válido, sem markdown, sem blocos de código, sem qualquer texto adicional.

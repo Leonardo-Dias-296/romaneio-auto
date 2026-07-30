@@ -121,6 +121,7 @@ async function buscarNF(numero, accessToken) {
     peso_liquido: pesoLiquido,
     nome_destinatario: nfData.cliente?.nome || nfData.destinatario?.nome || nfData.cliente?.razaoSocial || null,
     endereco_destinatario: null,
+    chave_acesso: nfData.chaveAcesso || null,
   };
 
   // Extrai endereço do destinatário

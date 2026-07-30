@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { signUp, signIn, signOut, getUser } from "./lib/supabase.js";
+import { QRCodeSVG } from "qrcode.react";
+import QRCode from "qrcode";
 
 // Chama sempre /api/extrair — relativo ao domínio atual.
 // Em dev (vercel dev): http://localhost:3000/api/extrair
@@ -113,6 +115,18 @@ async function generateEtiquetasPdf(labels, dados) {
     const nomeDestFs = nomeDest.length > 30 ? 9 : 10;
     const prodFs = produtos.length > 50 ? 8 : 9;
 
+    // Gera QR code como data URL
+    let qrImgHtml = "";
+    if (dados.chave_acesso) {
+      try {
+        const qrDataUrl = await QRCode.toDataURL(
+          `https://www.nfe.fazenda.gov.br/portal/consultanfe.aspx?chave=${dados.chave_acesso}`,
+          { width: 70, margin: 0, color: { dark: "#000000", light: "#ffffff" } }
+        );
+        qrImgHtml = `<div style="flex-shrink:0;display:flex;align-items:flex-end;"><img src="${qrDataUrl}" style="width:35px;height:35px;" /></div>`;
+      } catch {}
+    }
+
     wrapper.innerHTML = `
       <div style="width:378px;height:189px;background:#fff;border:2px solid #000;display:flex;flex-direction:column;font-family:Arial,sans-serif;">
         <div style="border-bottom:2px solid #000;padding:3px 10px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;height:38px;">
@@ -125,8 +139,11 @@ async function generateEtiquetasPdf(labels, dados) {
             <div style="text-align:right;flex-shrink:0;margin-left:8px;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;">Data</div><div style="font-size:9px;font-weight:800;color:#000;">${escapeHtml(data)}</div></div>
           </div>
           <div style="padding-bottom:1px;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;">Cliente</div><div style="font-size:${nomeDestFs}px;font-weight:800;color:#000;">${escapeHtml(nomeDest) || "—"}</div></div>
-          <div style="padding-bottom:1px;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;">Transportadora</div><div style="font-size:${transpFs}px;font-weight:800;color:#000;">${escapeHtml(transp)}</div></div>
-          <div style="flex:1;overflow:hidden;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;">Produto(s)</div><div style="font-size:${prodFs}px;font-weight:700;color:#000;line-height:1.2;">${escapeHtml(produtos)}</div></div>
+          <div style="padding-bottom:1px;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;">Transportadora</div><div style="font-size:${transpFs}px;font-weight:800;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(transp)}</div></div>
+          <div style="flex:1;overflow:hidden;display:flex;gap:4px;">
+            <div style="flex:1;overflow:hidden;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;">Produto(s)</div><div style="font-size:${prodFs}px;font-weight:700;color:#000;line-height:1.2;">${escapeHtml(produtos)}</div></div>
+            ${qrImgHtml}
+          </div>
         </div>
         <div style="border-top:1px solid #CBD5E1;padding:1px 10px;display:flex;justify-content:space-between;flex-shrink:0;height:14px;align-items:center;">
           <span style="font-size:7px;color:#000;font-weight:700;">FRICLIM © ${new Date().getFullYear()}</span>
@@ -396,11 +413,23 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
         </div>
         <div style={{ paddingBottom: 1 }}>
           <div style={{ fontSize: 6, fontWeight: 900, color: "#000", textTransform: "uppercase" }}>Transportadora</div>
-          <div style={{ fontSize: transpFont, fontWeight: 800, color: "#000" }}>{transp || "—"}</div>
+          <div style={{ fontSize: transpFont, fontWeight: 800, color: "#000", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{transp || "—"}</div>
         </div>
-        <div style={{ flex: 1, overflow: "hidden" }}>
-          <div style={{ fontSize: 6, fontWeight: 900, color: "#000", textTransform: "uppercase" }}>Produto(s)</div>
-          <div style={{ fontSize: prodFont, fontWeight: 700, color: "#000", lineHeight: 1.2 }}>{produtos}</div>
+        <div style={{ flex: 1, overflow: "hidden", display: "flex", gap: 4 }}>
+          <div style={{ flex: 1, overflow: "hidden" }}>
+            <div style={{ fontSize: 6, fontWeight: 900, color: "#000", textTransform: "uppercase" }}>Produto(s)</div>
+            <div style={{ fontSize: prodFont, fontWeight: 700, color: "#000", lineHeight: 1.2 }}>{produtos}</div>
+          </div>
+          {dados.chave_acesso && (
+            <div style={{ flexShrink: 0, display: "flex", alignItems: "flex-end" }}>
+              <QRCodeSVG
+                value={`https://www.nfe.fazenda.gov.br/portal/consultanfe.aspx?chave=${dados.chave_acesso}`}
+                size={35}
+                level="M"
+                includeMargin={false}
+              />
+            </div>
+          )}
         </div>
       </div>
       <div style={{ borderTop: "1px solid #CBD5E1", padding: "1px 10px", display: "flex", justifyContent: "space-between", flexShrink: 0, height: 14, alignItems: "center" }}>
@@ -684,7 +713,7 @@ export default function App() {
       const allNotas = [];
       let shared = {};
 
-      const campoPrefixo = ["transportadora", "cnpj_transp", "endereco_transp", "cidade_transp", "uf_transp", "telefone_transp", "nome_motorista", "cpf_motorista", "placa_veiculo", "data_retirada", "horario_retirada"];
+      const campoPrefixo = ["transportadora", "cnpj_transp", "endereco_transp", "cidade_transp", "uf_transp", "telefone_transp", "nome_motorista", "cpf_motorista", "placa_veiculo", "data_retirada", "horario_retirada", "nome_destinatario", "endereco_destinatario", "chave_acesso"];
 
       for (let i = 0; i < files.length; i++) {
         setStatusMsg(`Processando arquivo ${i + 1}/${files.length}...`);
@@ -765,7 +794,7 @@ export default function App() {
 
       for (const nfData of notas) {
         const shared = {};
-      const campoPrefixo = ["transportadora", "cnpj_transp", "endereco_transp", "cidade_transp", "uf_transp", "telefone_transp", "nome_motorista", "cpf_motorista", "placa_veiculo", "data_retirada", "horario_retirada", "nome_destinatario", "endereco_destinatario"];
+      const campoPrefixo = ["transportadora", "cnpj_transp", "endereco_transp", "cidade_transp", "uf_transp", "telefone_transp", "nome_motorista", "cpf_motorista", "placa_veiculo", "data_retirada", "horario_retirada", "nome_destinatario", "endereco_destinatario", "chave_acesso"];
         for (const chave of campoPrefixo) {
           if (nfData[chave]) shared[chave] = nfData[chave];
         }
