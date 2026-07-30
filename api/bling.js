@@ -70,9 +70,9 @@ async function buscarNF(numero, accessToken) {
   const transportador = transp.transportador || {};
 
   // Log debug para entender a estrutura do destinatário
-  const cliDebug = nfData.cliente || nfData.destinatario || {};
-  console.log("[bling] nfData keys:", Object.keys(nfData).join(", "));
-  console.log("[bling] cliente:", JSON.stringify(cliDebug).substring(0, 300));
+  console.log("[bling] nfData top keys:", Object.keys(nfData).join(", "));
+  console.log("[bling] nfData.cliente:", JSON.stringify(nfData.cliente || "NOT_FOUND").substring(0, 500));
+  console.log("[bling] nfData.destinatario:", JSON.stringify(nfData.destinatario || "NOT_FOUND").substring(0, 500));
 
   let qtdVolumes = (nfData.itens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0);
   let pesoBruto = nfData.pesoBruto || null;
