@@ -133,7 +133,7 @@ async function generateEtiquetasPdf(labels, dados) {
     wrapper.innerHTML = `
       <div style="width:378px;height:189px;background:#fff;border:2px solid #000;display:flex;flex-direction:column;font-family:Arial,sans-serif;">
         <div style="border-bottom:2px solid #000;padding:3px 10px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;height:38px;">
-          <div style="min-width:0;"><div style="font-weight:900;font-size:14px;color:#000;line-height:1.1;">FRICLIM</div><div style="font-size:7px;color:#000;font-weight:700;">SOLLAR SUL ENERGIA SOLAR</div></div>
+          <div style="min-width:0;"><div style="font-weight:900;font-size:9px;color:#000;line-height:1.1;">Remetente:</div><div style="font-size:6px;color:#000;font-weight:700;">Endereço: Rod. Aleixo Rocha da Silva, 1320 - Pinheiros, Taquari - RS CEP: 95860-000</div></div>
           <div style="border:2px solid #000;border-radius:4px;padding:1px 8px;text-align:center;flex-shrink:0;margin-left:6px;"><div style="font-size:6px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">VOLUME</div><div style="font-weight:900;font-size:20px;color:#000;line-height:1;">${escapeHtml(String(vol))}<span style="font-size:11px;font-weight:700;">/${escapeHtml(String(total))}</span></div></div>
         </div>
         <div style="flex:1;padding:3px 10px;display:flex;flex-direction:column;overflow:hidden;">
@@ -389,8 +389,8 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
     <div style={{ width: W, height: H, background: "#fff", border: "2px solid #000", borderRadius: forCapture ? 0 : 6, fontFamily: "Arial, sans-serif", display: "flex", flexDirection: "column" }}>
       <div style={{ borderBottom: "2px solid #000", padding: "3px 10px", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0, height: 38 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 900, fontSize: 14, color: "#000", lineHeight: 1.1 }}>FRICLIM</div>
-          <div style={{ fontSize: 7, color: "#000", fontWeight: 700 }}>SOLLAR SUL ENERGIA SOLAR</div>
+          <div style={{ fontWeight: 900, fontSize: 9, color: "#000", lineHeight: 1.1 }}>Remetente:</div>
+          <div style={{ fontSize: 6, color: "#000", fontWeight: 700 }}>Endereço: Rod. Aleixo Rocha da Silva, 1320 - Pinheiros, Taquari - RS CEP: 95860-000</div>
         </div>
         <div style={{ border: "2px solid #000", borderRadius: 4, padding: "1px 8px", textAlign: "center", flexShrink: 0, marginLeft: 6 }}>
           <div style={{ fontSize: 6, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1 }}>VOLUME</div>
