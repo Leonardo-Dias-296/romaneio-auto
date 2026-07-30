@@ -73,15 +73,16 @@ async function buscarNF(numero, accessToken) {
   console.log("[bling] nfData top keys:", Object.keys(nfData).join(", "));
   console.log("[bling] nfData.contato:", JSON.stringify(nfData.contato || "NOT_FOUND").substring(0, 500));
   console.log("[bling] nfData.chaveAcesso:", nfData.chaveAcesso || "NOT_FOUND");
+  console.log("[bling] nfData.xml:", nfData.xml ? "present" : "NOT_FOUND");
 
   let qtdVolumes = (nfData.itens || []).reduce((s, i) => s + (parseInt(i.quantidade) || 1), 0);
   let pesoBruto = nfData.pesoBruto || null;
   let pesoLiquido = nfData.pesoLiquido || null;
   let numeroPedido = nfData.numeroPedidoLoja || null;
+  let chaveAcesso = nfData.chaveAcesso || null;
 
-  // 4. Busca XML APENAS se precisar de peso/volumes que a API não tem
-  const precisaXml = !pesoBruto || !pesoLiquido;
-  if (precisaXml && nfData.xml) {
+  // 4. Busca XML para peso/volumes/chaveAcesso
+  if (nfData.xml) {
     try {
       const xmlRes = await fetch(nfData.xml, { signal: AbortSignal.timeout(8000) });
       if (xmlRes.ok) {
@@ -95,6 +96,11 @@ async function buscarNF(numero, accessToken) {
         if (!pesoLiquido) {
           const plMatch = xmlText.match(/<pesoL>([\d.]+)<\/pesoL>/);
           if (plMatch) pesoLiquido = parseFloat(plMatch[1]);
+        }
+        // Extrai chave de acesso do XML (tag <chNFe>)
+        if (!chaveAcesso) {
+          const chMatch = xmlText.match(/<chNFe>(\d{44})<\/chNFe>/);
+          if (chMatch) chaveAcesso = chMatch[1];
         }
       }
     } catch {}
@@ -121,7 +127,7 @@ async function buscarNF(numero, accessToken) {
     peso_liquido: pesoLiquido,
     nome_destinatario: nfData.contato?.nome || null,
     endereco_destinatario: null,
-    chave_acesso: nfData.chaveAcesso || null,
+    chave_acesso: chaveAcesso,
   };
 
   // Extrai endereço do destinatário (contato)
