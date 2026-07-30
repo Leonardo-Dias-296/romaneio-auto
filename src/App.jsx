@@ -111,23 +111,23 @@ async function generateEtiquetasPdf(labels, dados) {
     const pedido = l.nota.numero_pedido || dados.numero_pedido || "";
 
     wrapper.innerHTML = `
-      <div style="width:378px;height:189px;background:#fff;border:2px solid #000;display:flex;flex-direction:column;overflow:hidden;">
-        <div style="border-bottom:2px solid #000;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
-          <div><div style="font-weight:900;font-size:15px;color:#000;">FRICLIM</div><div style="font-size:10px;color:#000;font-weight:700;letter-spacing:1px;text-transform:uppercase;">GRUPO SOLLAR SUL+</div></div>
-          <div style="border:2px solid #000;border-radius:4px;padding:4px 10px;text-align:center;"><div style="font-size:8px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">VOLUME</div><div style="font-weight:900;font-size:24px;color:#000;line-height:1;">${escapeHtml(String(vol))}<span style="font-size:13px;font-weight:700;color:#000;">/${escapeHtml(String(total))}</span></div></div>
+      <div style="width:378px;height:189px;background:#fff;border:2px solid #000;display:flex;flex-direction:column;overflow:hidden;font-family:Arial,sans-serif;">
+        <div style="border-bottom:2px solid #000;padding:6px 12px;display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="font-weight:900;font-size:14px;color:#000;">FRICLIM</div><div style="font-size:9px;color:#000;font-weight:700;letter-spacing:1px;text-transform:uppercase;">GRUPO SOLLAR SUL+</div></div>
+          <div style="border:2px solid #000;border-radius:4px;padding:3px 8px;text-align:center;"><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">VOLUME</div><div style="font-weight:900;font-size:22px;color:#000;line-height:1;">${escapeHtml(String(vol))}<span style="font-size:12px;font-weight:700;color:#000;">/${escapeHtml(String(total))}</span></div></div>
         </div>
-        <div style="flex:1;padding:8px 12px;display:flex;flex-direction:column;gap:4px;overflow:hidden;">
-          <div style="border-bottom:1px solid #CBD5E1;padding-bottom:4px;display:flex;justify-content:space-between;">
-            <div style="min-width:0;flex:1;"><div style="font-size:8px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">Nota Fiscal</div><div style="font-size:14px;font-weight:900;color:#000;">NF-e ${escapeHtml(nf)}</div></div>
-            <div style="text-align:right;flex-shrink:0;margin-left:8px;"><div style="font-size:8px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">Data</div><div style="font-size:11px;font-weight:800;color:#000;">${escapeHtml(data)}</div></div>
+        <div style="flex:1;padding:6px 12px;display:flex;flex-direction:column;gap:2px;overflow:hidden;">
+          <div style="display:flex;justify-content:space-between;border-bottom:1px solid #CBD5E1;padding-bottom:3px;">
+            <div style="min-width:0;flex:1;"><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">Nota Fiscal</div><div style="font-size:13px;font-weight:900;color:#000;">NF-e ${escapeHtml(nf)}</div></div>
+            <div style="text-align:right;flex-shrink:0;margin-left:8px;"><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">Data</div><div style="font-size:11px;font-weight:800;color:#000;">${escapeHtml(data)}</div></div>
           </div>
-          <div style="min-width:0;"><div style="font-size:8px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">Transportadora</div><div style="font-size:11px;font-weight:800;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(transp)}</div></div>
-          <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-start;"><div style="font-size:8px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">Produto(s)</div><div style="font-size:11px;font-weight:700;color:#000;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;">${escapeHtml(produtos)}</div></div>
-          ${pedido ? `<div style="min-width:0;"><div style="font-size:8px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">Pedido</div><div style="font-size:11px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(pedido)}</div></div>` : ""}
+          <div style="min-width:0;"><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">Transportadora</div><div style="font-size:10px;font-weight:800;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(transp)}</div></div>
+          <div style="flex:1;min-width:0;overflow:hidden;"><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">Produto(s)</div><div style="font-size:10px;font-weight:700;color:#000;line-height:1.3;overflow:hidden;word-break:break-word;">${escapeHtml(produtos)}</div></div>
+          ${pedido ? `<div style="min-width:0;"><div style="font-size:7px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:1px;">Pedido</div><div style="font-size:10px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(pedido)}</div></div>` : ""}
         </div>
-        <div style="border-top:1px solid #CBD5E1;padding:3px 12px;display:flex;justify-content:space-between;">
-          <span style="font-size:8px;color:#000;font-weight:700;">FRICLIM © ${new Date().getFullYear()}</span>
-          <span style="font-size:8px;color:#000;font-weight:700;">Manuseie com cuidado</span>
+        <div style="border-top:1px solid #CBD5E1;padding:2px 12px;display:flex;justify-content:space-between;">
+          <span style="font-size:7px;color:#000;font-weight:700;">FRICLIM © ${new Date().getFullYear()}</span>
+          <span style="font-size:7px;color:#000;font-weight:700;">Manuseie com cuidado</span>
         </div>
       </div>`;
     container.appendChild(wrapper);
@@ -360,47 +360,47 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
     : { width: 378, height: 189, fontFamily: "Arial, sans-serif" };
   return (
     <div style={{ ...size, background: "#fff", border: "2px solid #000", borderRadius: forCapture ? 0 : 6, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-      <div style={{ borderBottom: "2px solid #000", padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ borderBottom: "2px solid #000", padding: "6px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ fontWeight: 900, fontSize: 15, color: "#000" }}>FRICLIM</div>
-          <div style={{ fontSize: 10, color: "#000", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>GRUPO SOLLAR SUL+</div>
+          <div style={{ fontWeight: 900, fontSize: 14, color: "#000" }}>FRICLIM</div>
+          <div style={{ fontSize: 9, color: "#000", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>GRUPO SOLLAR SUL+</div>
         </div>
-        <div style={{ border: "2px solid #000", borderRadius: 4, padding: "4px 10px", textAlign: "center" }}>
-          <div style={{ fontSize: 8, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1 }}>VOLUME</div>
-          <div style={{ fontWeight: 900, fontSize: 24, color: "#000", lineHeight: 1 }}>
-            {volumeInNota + 1}<span style={{ fontSize: 13, fontWeight: 700, color: "#000" }}>/{totalVolumesNota}</span>
+        <div style={{ border: "2px solid #000", borderRadius: 4, padding: "3px 8px", textAlign: "center" }}>
+          <div style={{ fontSize: 7, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1 }}>VOLUME</div>
+          <div style={{ fontWeight: 900, fontSize: 22, color: "#000", lineHeight: 1 }}>
+            {volumeInNota + 1}<span style={{ fontSize: 12, fontWeight: 700, color: "#000" }}>/{totalVolumesNota}</span>
           </div>
         </div>
       </div>
-        <div style={{ flex: 1, padding: "8px 12px", display: "flex", flexDirection: "column", gap: 4, overflow: "hidden" }}>
-        <div style={{ borderBottom: "1px solid #CBD5E1", paddingBottom: 4, display: "flex", justifyContent: "space-between" }}>
+      <div style={{ flex: 1, padding: "6px 12px", display: "flex", flexDirection: "column", gap: 2, overflow: "hidden" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #CBD5E1", paddingBottom: 3 }}>
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 8, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1 }}>Nota Fiscal</div>
-            <div style={{ fontSize: 14, fontWeight: 900, color: "#000" }}>NF-e {nota.numero_nf || "—"}</div>
+            <div style={{ fontSize: 7, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1 }}>Nota Fiscal</div>
+            <div style={{ fontSize: 13, fontWeight: 900, color: "#000" }}>NF-e {nota.numero_nf || "—"}</div>
           </div>
           <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 8 }}>
-            <div style={{ fontSize: 8, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1 }}>Data</div>
+            <div style={{ fontSize: 7, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1 }}>Data</div>
             <div style={{ fontSize: 11, fontWeight: 800, color: "#000" }}>{dados.data_retirada || "—"}</div>
           </div>
         </div>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 8, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1, marginBottom: 1 }}>Transportadora</div>
-          <div style={{ fontSize: 11, fontWeight: 800, color: "#000", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{dados.transportadora || "—"}</div>
+          <div style={{ fontSize: 7, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1 }}>Transportadora</div>
+          <div style={{ fontSize: 10, fontWeight: 800, color: "#000", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{dados.transportadora || "—"}</div>
         </div>
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>
-          <div style={{ fontSize: 8, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1, marginBottom: 1 }}>Produto(s)</div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#000", lineHeight: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>{nota.produtos || "Carga geral"}</div>
+        <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+          <div style={{ fontSize: 7, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1 }}>Produto(s)</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#000", lineHeight: 1.3, overflow: "hidden", wordBreak: "break-word" }}>{nota.produtos || "Carga geral"}</div>
         </div>
         {nota.numero_pedido && (
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 8, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1, marginBottom: 1 }}>Pedido</div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#000", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nota.numero_pedido}</div>
+            <div style={{ fontSize: 7, fontWeight: 900, color: "#000", textTransform: "uppercase", letterSpacing: 1 }}>Pedido</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#000", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nota.numero_pedido}</div>
           </div>
         )}
       </div>
-      <div style={{ borderTop: "1px solid #CBD5E1", padding: "3px 12px", display: "flex", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 8, color: "#000", fontWeight: 700 }}>FRICLIM © {new Date().getFullYear()}</span>
-        <span style={{ fontSize: 8, color: "#000", fontWeight: 700 }}>Manuseie com cuidado</span>
+      <div style={{ borderTop: "1px solid #CBD5E1", padding: "2px 12px", display: "flex", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 7, color: "#000", fontWeight: 700 }}>FRICLIM © {new Date().getFullYear()}</span>
+        <span style={{ fontSize: 7, color: "#000", fontWeight: 700 }}>Manuseie com cuidado</span>
       </div>
     </div>
   );
