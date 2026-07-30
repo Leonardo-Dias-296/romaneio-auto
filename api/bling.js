@@ -114,7 +114,21 @@ async function buscarNF(numero, accessToken) {
     observacoes: nfData.obs_interna || nfData.obs || null,
     peso_bruto: pesoBruto,
     peso_liquido: pesoLiquido,
+    nome_destinatario: nfData.cliente?.nome || nfData.destinatario?.nome || null,
+    endereco_destinatario: null,
   };
+
+  // Extrai endereço do destinatário
+  const cli = nfData.cliente || nfData.destinatario || {};
+  const endCli = cli.endereco?.geral || cli.endereco || {};
+  if (endCli) {
+    const log = endCli.endereco || "";
+    const num = endCli.numero || "";
+    const bai = endCli.bairro || "";
+    const cid = endCli.municipio || "";
+    const uf = endCli.uf || "";
+    if (log) result.endereco_destinatario = `${log}${num ? ", " + num : ""}${bai ? " - " + bai : ""}${cid ? " - " + cid : ""}${uf ? "/" + uf : ""}`;
+  }
 
   // 6. Busca transportadora com cache compartilhado de contatos
   const cnpjLimpo = (transportador.numeroDocumento || "").replace(/\D/g, "");
