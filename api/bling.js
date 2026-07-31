@@ -325,6 +325,7 @@ export default async function handler(req, res) {
           dataEmissao: n.dataEmissao || "",
           cliente: n.contato?.nome || "",
           valor: n.valorNota || 0,
+          chaveAcesso: n.chaveAcesso || null,
         }));
 
         return res.status(200).json({
@@ -335,6 +336,82 @@ export default async function handler(req, res) {
         });
       } catch {
         return res.status(500).json({ erro: "Erro ao listar NFs." });
+      }
+    }
+
+    // ── GET /api/bling?action=downloadDanfe&chaveAcesso=XXX ──
+    if (req.method === "GET" && action === "downloadDanfe") {
+      const token = await getToken();
+      if (!token) return res.status(400).json({ erro: "Bling não conectado." });
+      const chaveAcesso = url.searchParams.get("chaveAcesso");
+      if (!chaveAcesso || !/^\d{44}$/.test(chaveAcesso)) {
+        return res.status(400).json({ erro: "chaveAcesso inválida (44 dígitos)." });
+      }
+      try {
+        const accessToken = await getValidToken();
+        if (!accessToken) return res.status(401).json({ erro: "Token inválido." });
+        const r = await fetch(`${process.env.BLING_BASE_URL || "https://api.bling.com.br/Api/v3"}/nfe/documento/${chaveAcesso}?formato=pdf`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "enable-jwt": "1",
+            Accept: "1.0",
+          },
+          signal: AbortSignal.timeout(20000),
+        });
+        if (!r.ok) {
+          const err = await r.text();
+          return res.status(r.status).json({ erro: `Erro Bling: ${err}` });
+        }
+        const contentType = r.headers.get("content-type") || "application/pdf";
+        const filename = `DANFE_${chaveAcesso}.pdf`;
+        res.setHeader("Content-Type", contentType);
+        res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+        const buffer = Buffer.from(await r.arrayBuffer());
+        return res.status(200).send(buffer);
+      } catch (e) {
+        return res.status(500).json({ erro: "Erro ao baixar DANFE: " + e.message });
+      }
+    }
+
+    // ── GET /api/bling?action=downloadDanfeBatch ──
+    if (req.method === "GET" && action === "downloadDanfeBatch") {
+      const token = await getToken();
+      if (!token) return res.status(400).json({ erro: "Bling não conectado." });
+      const chavesParam = url.searchParams.get("chaves");
+      if (!chavesParam) return res.status(400).json({ erro: "Parâmetro 'chaves' obrigatório." });
+      const chaves = chavesParam.split(",").map(s => s.trim()).filter(s => /^\d{44}$/.test(s));
+      if (chaves.length === 0) return res.status(400).json({ erro: "Nenhuma chave válida." });
+      if (chaves.length > 20) return res.status(400).json({ erro: "Máximo 20 NFs por vez." });
+      try {
+        const accessToken = await getValidToken();
+        if (!accessToken) return res.status(401).json({ erro: "Token inválido." });
+        const BLING_BASE_URL = process.env.BLING_BASE_URL || "https://api.bling.com.br/Api/v3";
+        const results = [];
+        for (const chave of chaves) {
+          try {
+            const r = await fetch(`${BLING_BASE_URL}/nfe/documento/${chave}?formato=pdf`, {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "enable-jwt": "1",
+                Accept: "1.0",
+              },
+              signal: AbortSignal.timeout(20000),
+            });
+            if (r.ok) {
+              const buffer = Buffer.from(await r.arrayBuffer());
+              results.push({ chave, ok: true, pdf: buffer.toString("base64") });
+            } else {
+              results.push({ chave, ok: false, erro: `HTTP ${r.status}` });
+            }
+          } catch (e) {
+            results.push({ chave, ok: false, erro: e.message });
+          }
+        }
+        return res.status(200).json({ results });
+      } catch (e) {
+        return res.status(500).json({ erro: "Erro ao baixar DANFEs: " + e.message });
       }
     }
 

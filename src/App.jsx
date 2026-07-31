@@ -514,6 +514,7 @@ export default function App() {
   const [nfListLoading, setNfListLoading] = useState(false);
   const [nfSelected, setNfSelected] = useState(new Set());
   const [showNfList, setShowNfList] = useState(false);
+  const [danfeLoading, setDanfeLoading] = useState(false);
   const [adminNovoEmail, setAdminNovoEmail] = useState("");
   const [adminNovoNome, setAdminNovoNome] = useState("");
   const [adminNovaSenha, setAdminNovaSenha] = useState("");
@@ -814,6 +815,40 @@ export default function App() {
     } else {
       setNfSelected(new Set(nfList.map(n => n.numero)));
     }
+  }
+
+  async function baixarDanfes() {
+    if (nfSelected.size === 0) { alert("Selecione pelo menos uma NF"); return; }
+    const selected = nfList.filter(n => nfSelected.has(n.numero));
+    const chaves = selected.map(n => n.chaveAcesso).filter(Boolean);
+    if (chaves.length === 0) { alert("NFs selecionadas não possuem chave de acesso."); return; }
+    setDanfeLoading(true);
+    try {
+      const r = await fetch(`/api/bling?action=downloadDanfeBatch&chaves=${chaves.join(",")}`, { credentials: "include" });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); alert(d.erro || "Erro ao baixar DANFEs"); return; }
+      const data = await r.json();
+      let baixados = 0;
+      for (const item of (data.results || [])) {
+        if (item.ok && item.pdf) {
+          const bin = atob(item.pdf);
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          const blob = new Blob([bytes], { type: "application/pdf" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `DANFE_${item.chave}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          baixados++;
+        }
+      }
+      if (baixados > 0) alert(`${baixados} DANFE(s) baixado(s)!`);
+      else alert("Nenhum DANFE pôde ser baixado.");
+    } catch (e) { alert("Erro: " + e.message); }
+    finally { setDanfeLoading(false); }
   }
 
   async function buscarNFsSelecionadas() {
@@ -1421,6 +1456,10 @@ export default function App() {
                   style={{ background: nfSelected.size === 0 ? "#94A3B8" : "#16A34A", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: nfSelected.size === 0 ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
                   {blingBusy ? "Buscando..." : `Gerar Etiquetas (${nfSelected.size})`}
                 </button>
+                <button onClick={baixarDanfes} disabled={nfSelected.size === 0 || danfeLoading}
+                  style={{ background: nfSelected.size === 0 ? "#94A3B8" : "#2563EB", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: nfSelected.size === 0 ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+                  {danfeLoading ? "Baixando..." : `Baixar DANFEs (${nfSelected.size})`}
+                </button>
                 <button onClick={() => setShowNfList(false)} style={{ background: "#F1F5F9", color: "#64748B", border: "none", padding: "8px 16px", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Fechar</button>
               </div>
             </div>
@@ -1452,7 +1491,7 @@ export default function App() {
                     </tr>
                   ))}
                   {nfList.length === 0 && !nfListLoading && (
-                    <tr><td colSpan={5} style={{ padding: 20, textAlign: "center", color: "#94A3B8" }}>Nenhuma NF encontrada</td></tr>
+                    <tr><td colSpan={6} style={{ padding: 20, textAlign: "center", color: "#94A3B8" }}>Nenhuma NF encontrada</td></tr>
                   )}
                 </tbody>
               </table>
