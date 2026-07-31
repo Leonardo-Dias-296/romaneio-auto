@@ -142,9 +142,9 @@ async function generateEtiquetasPdf(labels, dados) {
           </div>
           <div><div style="font-size:6px;font-weight:900;color:#000;">DESTINATÁRIO</div><div style="font-size:${nomeDestFs}px;font-weight:800;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(nomeDest) || "—"}</div>${endDest ? `<div style="font-size:6px;color:#000;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(endDest)}</div>` : ""}</div>
           <div><div style="font-size:6px;font-weight:900;color:#000;">TRANSPORTADORA</div><div style="font-size:${transpFs}px;font-weight:800;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(transp)}</div></div>
-          <div style="flex:1;overflow:hidden;display:flex;gap:6px;align-items:flex-end;">
-            <div style="flex:1;overflow:hidden;"><div style="font-size:6px;font-weight:900;color:#000;">PRODUTO(S)</div><div style="font-size:${prodFs}px;font-weight:700;color:#000;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${escapeHtml(produtos)}</div></div>
-            ${qrImgHtml}
+          <div style="flex:1;overflow:hidden;display:flex;gap:6px;align-items:stretch;min-height:0;">
+            <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;"><div style="font-size:6px;font-weight:900;color:#000;">PRODUTO(S)</div><div style="font-size:${prodFs}px;font-weight:700;color:#000;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${escapeHtml(produtos)}</div></div>
+            <div style="flex-shrink:0;align-self:flex-end;">${qrImgHtml}</div>
           </div>
         </div>
         <div style="border-top:1px solid #000;padding:2px 10px;display:flex;justify-content:space-between;flex-shrink:0;height:14px;align-items:center;">
@@ -431,15 +431,15 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
         </div>
 
         {/* Produto(s) + QR Code */}
-        <div style={{ flex: 1, overflow: "hidden", display: "flex", gap: 6, alignItems: "flex-end" }}>
-          <div style={{ flex: 1, overflow: "hidden" }}>
+        <div style={{ flex: 1, overflow: "hidden", display: "flex", gap: 6, alignItems: "stretch", minHeight: 0 }}>
+          <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
             <div style={{ fontSize: 6, fontWeight: 900, color: "#000" }}>PRODUTO(S)</div>
             <div style={{ fontSize: prodFs, fontWeight: 700, color: "#000", lineHeight: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{produtos}</div>
           </div>
-          <div style={{ flexShrink: 0, display: "flex", alignItems: "flex-end" }}>
+          <div style={{ flexShrink: 0, alignSelf: "flex-end" }}>
             <QRCodeSVG
               value={QR_CODE_URL}
-              size={60}
+              size={56}
               level="M"
               includeMargin={false}
             />
