@@ -508,6 +508,12 @@ export default function App() {
   const [blingBusy, setBlingBusy] = useState(false);
   const [blingProgress, setBlingProgress] = useState("");
   const [blingConnected, setBlingConnected] = useState(false);
+  const [nfList, setNfList] = useState([]);
+  const [nfListPage, setNfListPage] = useState(1);
+  const [nfListHasMore, setNfListHasMore] = useState(false);
+  const [nfListLoading, setNfListLoading] = useState(false);
+  const [nfSelected, setNfSelected] = useState(new Set());
+  const [showNfList, setShowNfList] = useState(false);
   const [adminNovoEmail, setAdminNovoEmail] = useState("");
   const [adminNovoNome, setAdminNovoNome] = useState("");
   const [adminNovaSenha, setAdminNovaSenha] = useState("");
@@ -776,6 +782,72 @@ export default function App() {
       setDados({ ...shared, notas: allNotas });
       setStep(3);
     } catch (err) { alert("Erro:\n" + err.message); setStep(1); }
+  }
+
+  // ── Lista NFs do Bling ────────────────────────────────
+  async function listarNFBling(pagina = 1, append = false) {
+    setNfListLoading(true);
+    try {
+      const r = await fetch(`/api/bling?action=listNFs&pagina=${pagina}`, { credentials: "include" });
+      if (!r.ok) throw new Error("Erro ao listar NFs");
+      const d = await r.json();
+      setNfList(prev => append ? [...prev, ...d.notas] : d.notas);
+      setNfListPage(d.pagina);
+      setNfListHasMore(d.temProxima);
+      setShowNfList(true);
+    } catch (e) { alert(e.message); }
+    finally { setNfListLoading(false); }
+  }
+
+  function toggleNfSelect(numero) {
+    setNfSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(numero)) next.delete(numero);
+      else next.add(numero);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (nfSelected.size === nfList.length) {
+      setNfSelected(new Set());
+    } else {
+      setNfSelected(new Set(nfList.map(n => n.numero)));
+    }
+  }
+
+  async function buscarNFsSelecionadas() {
+    if (nfSelected.size === 0) { alert("Selecione pelo menos uma NF"); return; }
+    const numeros = Array.from(nfSelected);
+    setBlingNumero(numeros.join(", "));
+    setShowNfList(false);
+    setNfSelected(new Set());
+    setBlingBusy(true); setBlingProgress("Buscando 0/" + numeros.length);
+    try {
+      const r = await fetch("/api/bling", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ numeros }),
+      });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); alert(d.erro || "Erro ao buscar NFs"); return; }
+      const data = await r.json();
+      const notas = data.notas || (data.numero_nf ? [data] : []);
+      if (notas.length === 0) { alert("Nenhuma NF encontrada."); return; }
+      setDados(prev => {
+        const novasNotas = notas.map(n => ({
+          numero_nf: n.numero_nf, produtos: n.produtos, quantidade_volumes: n.quantidade_volumes,
+          numero_pedido: n.numero_pedido, observacoes: n.observacoes,
+        }));
+        const shared = {};
+        for (const k of ["transportadora","cnpj_transp","endereco_transp","cidade_transp","uf_transp","telefone_transp","nome_motorista","cpf_motorista","placa_veiculo","data_retirada","horario_retirada","nome_destinatario","endereco_destinatario","chave_acesso","url_chave"]) {
+          if (notas[0]?.[k]) shared[k] = notas[0][k];
+        }
+        return { ...prev, ...shared, notas: [...(prev.notas || []), ...novasNotas] };
+      });
+      setStep(3);
+    } catch (e) { alert(e.message); }
+    finally { setBlingBusy(false); setBlingProgress(""); }
   }
 
   // ── Busca NF(s) pelo número via API do Bling ────────────────────
@@ -1113,6 +1185,7 @@ export default function App() {
                     <>
                       <span style={{ fontSize: 11, color: "#16A34A", fontWeight: 700 }}>✓ Bling conectado</span>
                       <a onClick={async () => { await fetch("/api/bling?action=disconnect"); setBlingConnected(false); }} style={{ fontSize: 11, color: "#EF4444", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Reconectar</a>
+                      <a onClick={() => listarNFBling(1)} style={{ fontSize: 11, color: "#2563EB", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Listar NFs do Bling</a>
                     </>
                   ) : (
                     <a href="/api/bling?action=auth" style={{ fontSize: 11, color: "#2563EB", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Conectar Bling</a>
@@ -1335,6 +1408,69 @@ export default function App() {
         )}
       </div>
       </>
+      )}
+
+      {/* Modal de listagem de NFs */}
+      {showNfList && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+          <div style={{ background: "#fff", borderRadius: 12, width: "90%", maxWidth: 800, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#0F172A" }}>NFs do Bling ({nfSelected.length} selecionada{nfSelected.size !== 1 ? "s" : ""})</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={buscarNFsSelecionadas} disabled={nfSelected.size === 0 || blingBusy}
+                  style={{ background: nfSelected.size === 0 ? "#94A3B8" : "#16A34A", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: nfSelected.size === 0 ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+                  {blingBusy ? "Buscando..." : `Gerar Etiquetas (${nfSelected.size})`}
+                </button>
+                <button onClick={() => setShowNfList(false)} style={{ background: "#F1F5F9", color: "#64748B", border: "none", padding: "8px 16px", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Fechar</button>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflow: "auto", padding: "0 20px" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: "2px solid #E2E8F0" }}>
+                    <th style={{ padding: "8px 4px", textAlign: "left", width: 30 }}>
+                      <input type="checkbox" checked={nfList.length > 0 && nfSelected.size === nfList.length} onChange={toggleSelectAll} style={{ cursor: "pointer" }} />
+                    </th>
+                    <th style={{ padding: "8px 4px", textAlign: "left", fontWeight: 700, color: "#64748B", fontSize: 11, textTransform: "uppercase" }}>NF</th>
+                    <th style={{ padding: "8px 4px", textAlign: "left", fontWeight: 700, color: "#64748B", fontSize: 11, textTransform: "uppercase" }}>Cliente</th>
+                    <th style={{ padding: "8px 4px", textAlign: "left", fontWeight: 700, color: "#64748B", fontSize: 11, textTransform: "uppercase" }}>Emissão</th>
+                    <th style={{ padding: "8px 4px", textAlign: "left", fontWeight: 700, color: "#64748B", fontSize: 11, textTransform: "uppercase" }}>Situação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {nfList.map(n => (
+                    <tr key={n.id} onClick={() => toggleNfSelect(n.numero)} style={{ borderBottom: "1px solid #F1F5F9", cursor: "pointer", background: nfSelected.has(n.numero) ? "#EFF6FF" : "transparent" }}>
+                      <td style={{ padding: "8px 4px" }}>
+                        <input type="checkbox" checked={nfSelected.has(n.numero)} onChange={() => toggleNfSelect(n.numero)} onClick={e => e.stopPropagation()} style={{ cursor: "pointer" }} />
+                      </td>
+                      <td style={{ padding: "8px 4px", fontWeight: 600, color: "#0F172A" }}>{n.numero}</td>
+                      <td style={{ padding: "8px 4px", color: "#334155" }}>{n.cliente || "—"}</td>
+                      <td style={{ padding: "8px 4px", color: "#64748B" }}>{n.dataEmissao ? new Date(n.dataEmissao).toLocaleDateString("pt-BR") : "—"}</td>
+                      <td style={{ padding: "8px 4px" }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4, background: n.situacao === "Autorizada" ? "#DCFCE7" : n.situacao === "Cancelada" ? "#FEE2E2" : "#F1F5F9", color: n.situacao === "Autorizada" ? "#166534" : n.situacao === "Cancelada" ? "#DC2626" : "#64748B" }}>{n.situacao || "—"}</span>
+                      </td>
+                    </tr>
+                  ))}
+                  {nfList.length === 0 && !nfListLoading && (
+                    <tr><td colSpan={5} style={{ padding: 20, textAlign: "center", color: "#94A3B8" }}>Nenhuma NF encontrada</td></tr>
+                  )}
+                </tbody>
+              </table>
+              {nfListLoading && <div style={{ padding: 20, textAlign: "center", color: "#64748B" }}>Carregando...</div>}
+            </div>
+            <div style={{ padding: "12px 20px", borderTop: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: 12, color: "#64748B" }}>Página {nfListPage}</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {nfListPage > 1 && (
+                  <button onClick={() => listarNFBling(nfListPage - 1)} style={{ background: "#F1F5F9", color: "#64748B", border: "none", padding: "6px 12px", borderRadius: 5, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Anterior</button>
+                )}
+                {nfListHasMore && (
+                  <button onClick={() => listarNFBling(nfListPage + 1, true)} style={{ background: "#F1F5F9", color: "#64748B", border: "none", padding: "6px 12px", borderRadius: 5, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Próxima</button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

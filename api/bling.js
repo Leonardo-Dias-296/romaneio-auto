@@ -306,6 +306,38 @@ export default async function handler(req, res) {
       }
     }
 
+    // ── GET /api/bling?action=listNFs ──
+    if (req.method === "GET" && action === "listNFs") {
+      const token = await getToken();
+      if (!token) return res.status(400).json({ erro: "Bling não conectado." });
+      try {
+        const accessToken = await getValidToken();
+        if (!accessToken) return res.status(401).json({ erro: "Token inválido." });
+
+        const pagina = parseInt(url.searchParams.get("pagina")) || 1;
+        const limite = 100;
+
+        const listData = await blingGet(`/nfe?pagina=${pagina}&limite=${limite}`, accessToken);
+        const notas = (listData.data || []).map(n => ({
+          id: n.id,
+          numero: n.numero || "",
+          situacao: n.situacao || "",
+          dataEmissao: n.dataEmissao || "",
+          cliente: n.contato?.nome || "",
+          valor: n.valorNota || 0,
+        }));
+
+        return res.status(200).json({
+          notas,
+          total: notas.length,
+          pagina,
+          temProxima: notas.length === limite,
+        });
+      } catch {
+        return res.status(500).json({ erro: "Erro ao listar NFs." });
+      }
+    }
+
     // ── POST /api/bling → search NF(s) by number ──
     if (req.method === "POST") {
       const token = await getToken();
