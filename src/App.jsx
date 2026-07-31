@@ -1181,57 +1181,58 @@ export default function App() {
 
         {/* STEP 1 */}
         {step === 1 && (
-          <div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" }}>
+            {/* Buscar NF pelo Bling */}
+            <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: 24 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>Buscar NF pelo Bling</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>Número da NF</div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input value={blingNumero} onChange={e => setBlingNumero(e.target.value)}
+                  placeholder="Ex: 723, 724, 725"
+                  onKeyDown={e => e.key === "Enter" && buscarNFBling()}
+                  style={{ flex: 1, border: "1px solid #CBD5E1", borderRadius: 8, padding: "10px 14px", fontSize: 14, fontWeight: 500, color: "#0F172A", background: "#fff", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                <button onClick={buscarNFBling} disabled={blingBusy || !blingNumero.trim()}
+                  style={{ background: blingBusy ? "#94A3B8" : "#16A34A", color: "#fff", border: "none", padding: "10px 20px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: blingBusy ? "not-allowed" : "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                  {blingBusy ? "Buscando..." : "Buscar"}
+                </button>
+              </div>
+              <div style={{ fontSize: 10, color: "#94A3B8", marginTop: 6 }}>Separe por vírgula, espaço ou ponto e vírgula para buscar várias</div>
+              {blingProgress && (
+                <div style={{ marginTop: 8, fontSize: 12, fontWeight: 600, color: "#2563EB" }}>{blingProgress}</div>
+              )}
+              <div style={{ marginTop: 14, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                {blingConnected ? (
+                  <>
+                    <span style={{ fontSize: 11, color: "#16A34A", fontWeight: 700 }}>✓ Bling conectado</span>
+                    <a onClick={async () => { await fetch("/api/bling?action=disconnect"); setBlingConnected(false); }} style={{ fontSize: 11, color: "#EF4444", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Reconectar</a>
+                    <a onClick={() => listarNFBling(1)} style={{ fontSize: 11, color: "#2563EB", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Listar NFs do Bling</a>
+                  </>
+                ) : (
+                  <a href="/api/bling?action=auth" style={{ fontSize: 11, color: "#2563EB", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Conectar Bling</a>
+                )}
+                {blingConnected && (
+                  <a href="/api/bling?action=test" target="_blank" style={{ fontSize: 11, color: "#64748B", textDecoration: "underline", cursor: "pointer" }}>Testar conexão</a>
+                )}
+              </div>
+            </div>
+
+            {/* Envio de arquivos */}
             <div onClick={() => fileRef.current.click()}
-              style={{ background: "#fff", border: "2px dashed #CBD5E1", borderRadius: 12, padding: "72px 32px", textAlign: "center", cursor: "pointer", transition: "border-color .2s" }}
+              style={{ background: "#fff", border: "2px dashed #CBD5E1", borderRadius: 12, padding: "48px 24px", textAlign: "center", cursor: "pointer", transition: "border-color .2s" }}
               onMouseEnter={e => e.currentTarget.style.borderColor = "#64748B"}
               onMouseLeave={e => e.currentTarget.style.borderColor = "#CBD5E1"}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>📄</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: "#0F172A", marginBottom: 8 }}>Envie as Notas Fiscais</div>
-              <p style={{ fontSize: 14, color: "#64748B", marginBottom: 24 }}>Selecione 1 ou mais arquivos — o sistema gera um romaneio único com todas as NFs</p>
-              <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 24, flexWrap: "wrap" }}>
+              <div style={{ fontSize: 44, marginBottom: 14 }}>📄</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 6 }}>Envie as Notas Fiscais</div>
+              <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>Selecione 1 ou mais arquivos — o sistema gera um romaneio único com todas as NFs</p>
+              <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 20, flexWrap: "wrap" }}>
                 {["PDF", "PNG", "JPG", "TXT", "XML"].map(f => <span key={f} style={{ background: "#F1F5F9", color: "#475569", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 5, border: "1px solid #E2E8F0" }}>{f}</span>)}
               </div>
               <div style={{ background: "#0F172A", color: "#fff", display: "inline-block", padding: "12px 28px", borderRadius: 8, fontSize: 14, fontWeight: 700 }}>Selecionar Arquivo</div>
               <input ref={fileRef} type="file" accept=".pdf,.png,.jpg,.jpeg,.txt,.xml" multiple style={{ display: "none" }} onChange={e => { const f = Array.from(e.target.files || []); if (f.length) processarArquivos(f); }} />
             </div>
-            <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <div style={{ flex: 1, minWidth: 280, background: "#fff", border: "1px solid #E2E8F0", borderRadius: 10, padding: 18 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Buscar NF pelo Bling</div>
-                <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 4 }}>Número da NF</div>
-                    <input value={blingNumero} onChange={e => setBlingNumero(e.target.value)}
-                      placeholder="Ex: 723, 724, 725"
-                      onKeyDown={e => e.key === "Enter" && buscarNFBling()}
-                      style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "9px 12px", fontSize: 14, fontWeight: 500, color: "#0F172A", background: "#fff", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
-                    <div style={{ fontSize: 10, color: "#94A3B8", marginTop: 3 }}>Separe por vírgula, espaço ou ponto e vírgula para buscar várias</div>
-                  </div>
-                  <button onClick={buscarNFBling} disabled={blingBusy || !blingNumero.trim()}
-                    style={{ background: blingBusy ? "#94A3B8" : "#16A34A", color: "#fff", border: "none", padding: "10px 18px", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: blingBusy ? "not-allowed" : "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-                    {blingBusy ? "Buscando..." : "Buscar"}
-                  </button>
-                </div>
-                {blingProgress && (
-                  <div style={{ marginTop: 8, fontSize: 12, fontWeight: 600, color: "#2563EB" }}>{blingProgress}</div>
-                )}
-                <div style={{ marginTop: 10, display: "flex", gap: 12, alignItems: "center" }}>
-                  {blingConnected ? (
-                    <>
-                      <span style={{ fontSize: 11, color: "#16A34A", fontWeight: 700 }}>✓ Bling conectado</span>
-                      <a onClick={async () => { await fetch("/api/bling?action=disconnect"); setBlingConnected(false); }} style={{ fontSize: 11, color: "#EF4444", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Reconectar</a>
-                      <a onClick={() => listarNFBling(1)} style={{ fontSize: 11, color: "#2563EB", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Listar NFs do Bling</a>
-                    </>
-                  ) : (
-                    <a href="/api/bling?action=auth" style={{ fontSize: 11, color: "#2563EB", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Conectar Bling</a>
-                  )}
-                  {blingConnected && (
-                    <a href="/api/bling?action=test" target="_blank" style={{ fontSize: 11, color: "#64748B", textDecoration: "underline", cursor: "pointer" }}>Testar conexão</a>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div style={{ marginTop: 20, background: "#fff", border: "1px solid #E2E8F0", borderRadius: 10, padding: 18 }}>
+
+            {/* Remetente */}
+            <div style={{ gridColumn: "1/-1", background: "#fff", border: "1px solid #E2E8F0", borderRadius: 10, padding: 18 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Remetente pré-configurado</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, fontSize: 13 }}>
                 <div><span style={{ color: "#64748B" }}>Empresa: </span><span style={{ fontWeight: 600 }}>{REMETENTE.razao_social}</span></div>
