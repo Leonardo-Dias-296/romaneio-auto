@@ -115,41 +115,41 @@ async function generateEtiquetasPdf(labels, dados) {
     const produtos = l.nota.produtos || dados.produtos || "Carga geral";
     const nomeDest = dados.nome_destinatario || "";
     const endDest = dados.endereco_destinatario || "";
-    const transpFs = transp.length > 40 ? 6 : transp.length > 30 ? 7 : 8;
-    const nomeDestFs = nomeDest.length > 35 ? 7 : nomeDest.length > 25 ? 8 : 9;
-    const prodFs = produtos.length > 60 ? 6 : produtos.length > 40 ? 7 : 8;
+    const transpFs = transp.length > 40 ? 8 : transp.length > 28 ? 9 : 10;
+    const nomeDestFs = nomeDest.length > 35 ? 9 : nomeDest.length > 25 ? 10 : 11;
+    const prodFs = produtos.length > 60 ? 7 : produtos.length > 40 ? 8 : 9;
 
     // Gera QR code como data URL
     let qrImgHtml = "";
     try {
       const qrDataUrl = await QRCode.toDataURL(
         QR_CODE_URL,
-        { width: 110, margin: 0, color: { dark: "#000000", light: "#ffffff" } }
+        { width: 120, margin: 0, color: { dark: "#000000", light: "#ffffff" } }
       );
-      qrImgHtml = `<div style="flex-shrink:0;display:flex;align-items:flex-end;"><img src="${qrDataUrl}" style="width:55px;height:55px;" /></div>`;
+      qrImgHtml = `<div style="flex-shrink:0;display:flex;align-items:flex-end;"><img src="${qrDataUrl}" style="width:60px;height:60px;" /></div>`;
     } catch {}
 
     wrapper.innerHTML = `
       <div style="width:378px;height:189px;background:#fff;border:2px solid #000;display:flex;flex-direction:column;font-family:Arial,sans-serif;">
-        <div style="border-bottom:2px solid #000;padding:2px 8px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;height:34px;">
-          <div style="min-width:0;flex:1;overflow:hidden;"><div style="font-weight:900;font-size:8px;color:#000;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Remetente: <span style="font-weight:800;">FRICLIM SOLLAR SUL ENERGIA SOLAR</span></div><div style="font-size:5px;color:#333;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Rod. Aleixo Rocha da Silva, 1320 - Pinheiros, Taquari - RS CEP: 95860-000</div></div>
-          <div style="border:2px solid #000;border-radius:4px;padding:0 6px;text-align:center;flex-shrink:0;margin-left:4px;"><div style="font-size:5px;font-weight:900;color:#000;letter-spacing:0.5px;">VOLUME</div><div style="font-weight:900;font-size:18px;color:#000;line-height:1;">${escapeHtml(String(vol))}<span style="font-size:10px;font-weight:700;">/${escapeHtml(String(total))}</span></div></div>
+        <div style="border-bottom:2px solid #000;padding:4px 10px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;height:40px;">
+          <div style="min-width:0;flex:1;overflow:hidden;"><div style="font-weight:900;font-size:10px;color:#000;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Remetente: <span style="font-weight:800;">FRICLIM SOLLAR SUL ENERGIA SOLAR</span></div><div style="font-size:7px;color:#000;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Rod. Aleixo Rocha da Silva, 1320 - Pinheiros, Taquari - RS CEP: 95860-000</div></div>
+          <div style="border:2px solid #000;border-radius:4px;padding:2px 8px;text-align:center;flex-shrink:0;margin-left:6px;"><div style="font-size:6px;font-weight:900;color:#000;letter-spacing:1px;">VOLUME</div><div style="font-weight:900;font-size:22px;color:#000;line-height:1;">${escapeHtml(String(vol))}<span style="font-size:12px;font-weight:700;">/${escapeHtml(String(total))}</span></div></div>
         </div>
-        <div style="flex:1;padding:2px 8px;display:flex;flex-direction:column;overflow:hidden;gap:1px;">
+        <div style="flex:1;padding:3px 10px;display:flex;flex-direction:column;overflow:hidden;gap:2px;">
           <div style="display:flex;justify-content:space-between;align-items:flex-end;">
-            <div><div style="font-size:5px;font-weight:900;color:#666;text-transform:uppercase;">NF-e</div><div style="font-size:11px;font-weight:900;color:#000;">${escapeHtml(nf)}</div></div>
-            <div style="text-align:right;"><div style="font-size:5px;font-weight:900;color:#666;text-transform:uppercase;">Data</div><div style="font-size:8px;font-weight:800;color:#000;">${escapeHtml(data)}</div></div>
+            <div><div style="font-size:6px;font-weight:900;color:#000;">NF-e</div><div style="font-size:14px;font-weight:900;color:#000;">${escapeHtml(nf)}</div></div>
+            <div style="text-align:right;"><div style="font-size:6px;font-weight:900;color:#000;">Data</div><div style="font-size:10px;font-weight:800;color:#000;">${escapeHtml(data)}</div></div>
           </div>
-          <div><div style="font-size:5px;font-weight:900;color:#666;text-transform:uppercase;">DESTINATÁRIO</div><div style="font-size:${nomeDestFs}px;font-weight:800;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(nomeDest) || "—"}</div>${endDest ? `<div style="font-size:5px;color:#333;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(endDest)}</div>` : ""}</div>
-          <div><div style="font-size:5px;font-weight:900;color:#666;text-transform:uppercase;">Transportadora</div><div style="font-size:${transpFs}px;font-weight:800;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(transp)}</div></div>
-          <div style="flex:1;overflow:hidden;display:flex;gap:4px;align-items:flex-end;">
-            <div style="flex:1;overflow:hidden;"><div style="font-size:5px;font-weight:900;color:#666;text-transform:uppercase;">Produto(s)</div><div style="font-size:${prodFs}px;font-weight:700;color:#000;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${escapeHtml(produtos)}</div></div>
+          <div><div style="font-size:6px;font-weight:900;color:#000;">DESTINATÁRIO</div><div style="font-size:${nomeDestFs}px;font-weight:800;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(nomeDest) || "—"}</div>${endDest ? `<div style="font-size:6px;color:#000;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(endDest)}</div>` : ""}</div>
+          <div><div style="font-size:6px;font-weight:900;color:#000;">TRANSPORTADORA</div><div style="font-size:${transpFs}px;font-weight:800;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(transp)}</div></div>
+          <div style="flex:1;overflow:hidden;display:flex;gap:6px;align-items:flex-end;">
+            <div style="flex:1;overflow:hidden;"><div style="font-size:6px;font-weight:900;color:#000;">PRODUTO(S)</div><div style="font-size:${prodFs}px;font-weight:700;color:#000;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${escapeHtml(produtos)}</div></div>
             ${qrImgHtml}
           </div>
         </div>
-        <div style="border-top:1px solid #CBD5E1;padding:1px 8px;display:flex;justify-content:space-between;flex-shrink:0;height:12px;align-items:center;">
-          <span style="font-size:6px;color:#000;font-weight:700;">FRICLIM © ${new Date().getFullYear()} &nbsp;&nbsp; Telefone: (51) 2666-0223</span>
-          <span style="font-size:6px;color:#000;font-weight:700;">Manuseie com cuidado</span>
+        <div style="border-top:1px solid #000;padding:2px 10px;display:flex;justify-content:space-between;flex-shrink:0;height:14px;align-items:center;">
+          <span style="font-size:7px;color:#000;font-weight:800;">FRICLIM © ${new Date().getFullYear()} &nbsp;&nbsp; Telefone: (51) 2666-0223</span>
+          <span style="font-size:7px;color:#000;font-weight:800;">Manuseie com cuidado</span>
         </div>
       </div>`;
     container.appendChild(wrapper);
@@ -383,63 +383,63 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
   const transp = dados.transportadora || "";
   const produtos = (nota.produtos || "Carga geral");
 
-  const transpFs = transp.length > 40 ? 6 : transp.length > 30 ? 7 : 8;
-  const nomeDestFs = nomeDest.length > 35 ? 7 : nomeDest.length > 25 ? 8 : 9;
-  const prodFs = produtos.length > 60 ? 6 : produtos.length > 40 ? 7 : 8;
+  const transpFs = transp.length > 40 ? 8 : transp.length > 28 ? 9 : 10;
+  const nomeDestFs = nomeDest.length > 35 ? 9 : nomeDest.length > 25 ? 10 : 11;
+  const prodFs = produtos.length > 60 ? 7 : produtos.length > 40 ? 8 : 9;
 
   return (
     <div style={{ width: W, height: H, background: "#fff", border: "2px solid #000", borderRadius: forCapture ? 0 : 6, fontFamily: "Arial, sans-serif", display: "flex", flexDirection: "column" }}>
       {/* Header: Remetente + Volume */}
-      <div style={{ borderBottom: "2px solid #000", padding: "2px 8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0, height: 34 }}>
+      <div style={{ borderBottom: "2px solid #000", padding: "4px 10px", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0, height: 40 }}>
         <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
-          <div style={{ fontWeight: 900, fontSize: 8, color: "#000", lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Remetente: <span style={{ fontWeight: 800 }}>FRICLIM SOLLAR SUL ENERGIA SOLAR</span></div>
-          <div style={{ fontSize: 5, color: "#333", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Rod. Aleixo Rocha da Silva, 1320 - Pinheiros, Taquari - RS CEP: 95860-000</div>
+          <div style={{ fontWeight: 900, fontSize: 10, color: "#000", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Remetente: <span style={{ fontWeight: 800 }}>FRICLIM SOLLAR SUL ENERGIA SOLAR</span></div>
+          <div style={{ fontSize: 7, color: "#000", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Rod. Aleixo Rocha da Silva, 1320 - Pinheiros, Taquari - RS CEP: 95860-000</div>
         </div>
-        <div style={{ border: "2px solid #000", borderRadius: 4, padding: "0 6px", textAlign: "center", flexShrink: 0, marginLeft: 4 }}>
-          <div style={{ fontSize: 5, fontWeight: 900, color: "#000", letterSpacing: 0.5 }}>VOLUME</div>
-          <div style={{ fontWeight: 900, fontSize: 18, color: "#000", lineHeight: 1 }}>
-            {volumeInNota + 1}<span style={{ fontSize: 10, fontWeight: 700 }}>/{totalVolumesNota}</span>
+        <div style={{ border: "2px solid #000", borderRadius: 4, padding: "2px 8px", textAlign: "center", flexShrink: 0, marginLeft: 6 }}>
+          <div style={{ fontSize: 6, fontWeight: 900, color: "#000", letterSpacing: 1 }}>VOLUME</div>
+          <div style={{ fontWeight: 900, fontSize: 22, color: "#000", lineHeight: 1 }}>
+            {volumeInNota + 1}<span style={{ fontSize: 12, fontWeight: 700 }}>/{totalVolumesNota}</span>
           </div>
         </div>
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, padding: "2px 8px", display: "flex", flexDirection: "column", overflow: "hidden", gap: 1 }}>
+      <div style={{ flex: 1, padding: "3px 10px", display: "flex", flexDirection: "column", overflow: "hidden", gap: 2 }}>
         {/* NF-e + Data */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
-            <div style={{ fontSize: 5, fontWeight: 900, color: "#666", textTransform: "uppercase" }}>NF-e</div>
-            <div style={{ fontSize: 11, fontWeight: 900, color: "#000" }}>{nota.numero_nf || "—"}</div>
+            <div style={{ fontSize: 6, fontWeight: 900, color: "#000" }}>NF-e</div>
+            <div style={{ fontSize: 14, fontWeight: 900, color: "#000" }}>{nota.numero_nf || "—"}</div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 5, fontWeight: 900, color: "#666", textTransform: "uppercase" }}>Data</div>
-            <div style={{ fontSize: 8, fontWeight: 800, color: "#000" }}>{dados.data_retirada || "—"}</div>
+            <div style={{ fontSize: 6, fontWeight: 900, color: "#000" }}>Data</div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: "#000" }}>{dados.data_retirada || "—"}</div>
           </div>
         </div>
 
         {/* Destinatário */}
         <div>
-          <div style={{ fontSize: 5, fontWeight: 900, color: "#666" }}>DESTINATÁRIO</div>
+          <div style={{ fontSize: 6, fontWeight: 900, color: "#000" }}>DESTINATÁRIO</div>
           <div style={{ fontSize: nomeDestFs, fontWeight: 800, color: "#000", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nomeDest || "—"}</div>
-          {endDest && <div style={{ fontSize: 5, color: "#333", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{endDest}</div>}
+          {endDest && <div style={{ fontSize: 6, color: "#000", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{endDest}</div>}
         </div>
 
         {/* Transportadora */}
         <div>
-          <div style={{ fontSize: 5, fontWeight: 900, color: "#666", textTransform: "uppercase" }}>Transportadora</div>
+          <div style={{ fontSize: 6, fontWeight: 900, color: "#000" }}>TRANSPORTADORA</div>
           <div style={{ fontSize: transpFs, fontWeight: 800, color: "#000", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{transp || "—"}</div>
         </div>
 
         {/* Produto(s) + QR Code */}
-        <div style={{ flex: 1, overflow: "hidden", display: "flex", gap: 4, alignItems: "flex-end" }}>
+        <div style={{ flex: 1, overflow: "hidden", display: "flex", gap: 6, alignItems: "flex-end" }}>
           <div style={{ flex: 1, overflow: "hidden" }}>
-            <div style={{ fontSize: 5, fontWeight: 900, color: "#666", textTransform: "uppercase" }}>Produto(s)</div>
+            <div style={{ fontSize: 6, fontWeight: 900, color: "#000" }}>PRODUTO(S)</div>
             <div style={{ fontSize: prodFs, fontWeight: 700, color: "#000", lineHeight: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{produtos}</div>
           </div>
           <div style={{ flexShrink: 0, display: "flex", alignItems: "flex-end" }}>
             <QRCodeSVG
               value={QR_CODE_URL}
-              size={55}
+              size={60}
               level="M"
               includeMargin={false}
             />
@@ -448,9 +448,9 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
       </div>
 
       {/* Footer */}
-      <div style={{ borderTop: "1px solid #CBD5E1", padding: "1px 8px", display: "flex", justifyContent: "space-between", flexShrink: 0, height: 12, alignItems: "center" }}>
-        <span style={{ fontSize: 6, color: "#000", fontWeight: 700 }}>FRICLIM © {new Date().getFullYear()} &nbsp;&nbsp; Telefone: (51) 2666-0223</span>
-        <span style={{ fontSize: 6, color: "#000", fontWeight: 700 }}>Manuseie com cuidado</span>
+      <div style={{ borderTop: "1px solid #000", padding: "2px 10px", display: "flex", justifyContent: "space-between", flexShrink: 0, height: 14, alignItems: "center" }}>
+        <span style={{ fontSize: 7, color: "#000", fontWeight: 800 }}>FRICLIM © {new Date().getFullYear()} &nbsp;&nbsp; Telefone: (51) 2666-0223</span>
+        <span style={{ fontSize: 7, color: "#000", fontWeight: 800 }}>Manuseie com cuidado</span>
       </div>
     </div>
   );
