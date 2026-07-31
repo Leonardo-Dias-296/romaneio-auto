@@ -125,9 +125,9 @@ async function generateEtiquetasPdf(labels, dados) {
       try {
         const qrDataUrl = await QRCode.toDataURL(
           QR_CODE_URL,
-          { width: 100, margin: 0, color: { dark: "#000000", light: "#ffffff" } }
+          { width: 130, margin: 0, color: { dark: "#000000", light: "#ffffff" } }
         );
-        qrImgHtml = `<div style="flex-shrink:0;display:flex;align-items:flex-end;"><img src="${qrDataUrl}" style="width:50px;height:50px;" /></div>`;
+        qrImgHtml = `<div style="flex-shrink:0;display:flex;align-items:flex-end;"><img src="${qrDataUrl}" style="width:65px;height:65px;" /></div>`;
       } catch {}
     }
 
@@ -150,7 +150,7 @@ async function generateEtiquetasPdf(labels, dados) {
           </div>
         </div>
         <div style="border-top:1px solid #CBD5E1;padding:1px 10px;display:flex;justify-content:space-between;flex-shrink:0;height:14px;align-items:center;">
-          <span style="font-size:7px;color:#000;font-weight:700;">FRICLIM © ${new Date().getFullYear()}</span>
+          <span style="font-size:7px;color:#000;font-weight:700;">FRICLIM © ${new Date().getFullYear()} &nbsp;&nbsp; Telefone: (51) 2666-0223</span>
           <span style="font-size:7px;color:#000;font-weight:700;">Manuseie com cuidado</span>
         </div>
       </div>`;
@@ -429,7 +429,7 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
             <div style={{ flexShrink: 0, display: "flex", alignItems: "flex-end" }}>
               <QRCodeSVG
                 value={QR_CODE_URL}
-                size={50}
+                size={65}
                 level="M"
                 includeMargin={false}
               />
@@ -438,7 +438,7 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
         </div>
       </div>
       <div style={{ borderTop: "1px solid #CBD5E1", padding: "1px 10px", display: "flex", justifyContent: "space-between", flexShrink: 0, height: 14, alignItems: "center" }}>
-        <span style={{ fontSize: 7, color: "#000", fontWeight: 700 }}>FRICLIM © {new Date().getFullYear()}</span>
+        <span style={{ fontSize: 7, color: "#000", fontWeight: 700 }}>FRICLIM © {new Date().getFullYear()} &nbsp;&nbsp; Telefone: (51) 2666-0223</span>
         <span style={{ fontSize: 7, color: "#000", fontWeight: 700 }}>Manuseie com cuidado</span>
       </div>
     </div>
