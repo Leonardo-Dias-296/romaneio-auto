@@ -77,5 +77,25 @@ export default async function handler(req, res) {
     }
   }
 
+  if (req.method === "PATCH") {
+    const { id, password } = req.body || {};
+    if (!id || typeof id !== "string") return res.status(400).json({ erro: "ID obrigatório" });
+    if (!password || typeof password !== "string" || password.length < 6) {
+      return res.status(400).json({ erro: "Senha deve ter no mínimo 6 caracteres" });
+    }
+
+    try {
+      const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${id}`, {
+        method: "PUT",
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      if (!r.ok) return res.status(400).json({ erro: "Erro ao redefinir senha." });
+      return res.status(200).json({ ok: true });
+    } catch {
+      return res.status(500).json({ erro: "Erro interno." });
+    }
+  }
+
   return res.status(405).json({ erro: "Method not allowed" });
 }

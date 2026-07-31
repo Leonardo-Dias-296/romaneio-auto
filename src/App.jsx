@@ -941,6 +941,18 @@ export default function App() {
     } catch (e) { setAdminMsg(e.message); }
     finally { setAdminBusy(false); }
   }
+  async function adminResetPassword(id, email) {
+    const novaSenha = prompt(`Nova senha para ${email}:`);
+    if (!novaSenha) return;
+    if (novaSenha.length < 6) { setAdminMsg("Senha deve ter no mínimo 6 caracteres"); return; }
+    setAdminBusy(true); setAdminMsg("");
+    try {
+      const r = await adminFetch(`/api/admin-users`, { method: "PATCH", body: JSON.stringify({ id, password: novaSenha }) });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); setAdminMsg(d.erro || "Erro ao redefinir"); return; }
+      setAdminMsg(`Senha de ${email} redefinida com sucesso!`);
+    } catch (e) { setAdminMsg(e.message); }
+    finally { setAdminBusy(false); }
+  }
 
   const wizardSteps = ["Enviar NF", "Processando", "Resultado"];
 
@@ -1309,7 +1321,10 @@ export default function App() {
                         <div style={{ fontSize: 13, fontWeight: 600, color: "#0F172A" }}>{u.user_metadata?.nome || "Sem nome"}</div>
                         <div style={{ fontSize: 11, color: "#64748B" }}>{u.email} {isAdm(u) && <span style={{ background: "#FEF3C7", color: "#92400E", fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, marginLeft: 6 }}>ADMIN</span>}</div>
                       </div>
-                      {!isAdm(u) && <button onClick={() => adminDeleteUser(u.id, u.email)} disabled={adminBusy} style={{ background: "#FEE2E2", color: "#DC2626", border: "none", padding: "6px 12px", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Excluir</button>}
+                      {!isAdm(u) && <>
+                        <button onClick={() => adminResetPassword(u.id, u.email)} disabled={adminBusy} style={{ background: "#DBEAFE", color: "#1D4ED8", border: "none", padding: "6px 12px", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Redefinir</button>
+                        <button onClick={() => adminDeleteUser(u.id, u.email)} disabled={adminBusy} style={{ background: "#FEE2E2", color: "#DC2626", border: "none", padding: "6px 12px", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Excluir</button>
+                      </>}
                     </div>
                   ))}
                   {adminUsers.length === 0 && !adminBusy && <div style={{ fontSize: 13, color: "#94A3B8", textAlign: "center", padding: 20 }}>Nenhum usuário carregado</div>}
