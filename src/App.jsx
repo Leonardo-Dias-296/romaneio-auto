@@ -126,7 +126,7 @@ async function generateEtiquetasPdf(labels, dados) {
         QR_CODE_URL,
         { width: 120, margin: 0, color: { dark: "#000000", light: "#ffffff" } }
       );
-      qrImgHtml = `<div style="flex-shrink:0;width:44px;height:44px;line-height:0;"><img src="${qrDataUrl}" style="width:44px;height:44px;display:block;" /></div>`;
+      qrImgHtml = `<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;line-height:0;"><div style="font-size:5px;font-weight:900;color:#000;margin-bottom:1px;letter-spacing:0.5px;">Friclim.com</div><img src="${qrDataUrl}" style="width:44px;height:44px;display:block;" /></div>`;
     } catch {}
 
     wrapper.innerHTML = `
@@ -144,7 +144,7 @@ async function generateEtiquetasPdf(labels, dados) {
           <div><div style="font-size:6px;font-weight:900;color:#000;">TRANSPORTADORA</div><div style="font-size:${transpFs}px;font-weight:800;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(transp)}</div></div>
           <div style="display:flex;gap:6px;align-items:flex-end;min-height:0;">
             <div style="flex:1;min-width:0;overflow:hidden;"><div style="font-size:6px;font-weight:900;color:#000;">PRODUTO(S)</div><div style="font-size:${prodFs}px;font-weight:700;color:#000;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${escapeHtml(produtos)}</div></div>
-            <div style="flex-shrink:0;width:44px;height:44px;">${qrImgHtml}</div>
+            <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;">${qrImgHtml}</div>
           </div>
         </div>
         <div style="border-top:1px solid #000;padding:2px 10px;display:flex;justify-content:space-between;flex-shrink:0;height:14px;align-items:center;">
@@ -436,7 +436,8 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
             <div style={{ fontSize: 6, fontWeight: 900, color: "#000" }}>PRODUTO(S)</div>
             <div style={{ fontSize: prodFs, fontWeight: 700, color: "#000", lineHeight: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{produtos}</div>
           </div>
-          <div style={{ flexShrink: 0, width: 44, height: 44, lineHeight: 0 }}>
+          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", lineHeight: 0 }}>
+            <div style={{ fontSize: 5, fontWeight: 900, color: "#000", marginBottom: 1, letterSpacing: 0.5 }}>Friclim.com</div>
             <QRCodeSVG
               value={QR_CODE_URL}
               size={44}
