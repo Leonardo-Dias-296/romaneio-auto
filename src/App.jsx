@@ -111,10 +111,10 @@ async function generateEtiquetasPdf(labels, dados) {
     const total = l.totalVolumesNota;
     const nf = l.nota.numero_nf || "—";
     const data = dados.data_retirada || "—";
-    const transp = dados.transportadora || "—";
+    const transp = l.nota.transportadora || dados.transportadora || "—";
     const produtos = l.nota.produtos || dados.produtos || "Carga geral";
-    const nomeDest = dados.nome_destinatario || "";
-    const endDest = dados.endereco_destinatario || "";
+    const nomeDest = l.nota.nome_destinatario || dados.nome_destinatario || "";
+    const endDest = l.nota.endereco_destinatario || dados.endereco_destinatario || "";
     const transpFs = transp.length > 40 ? 8 : transp.length > 28 ? 9 : 10;
     const nomeDestFs = nomeDest.length > 35 ? 9 : nomeDest.length > 25 ? 10 : 11;
     const prodFs = produtos.length > 60 ? 7 : produtos.length > 40 ? 8 : 9;
@@ -126,7 +126,7 @@ async function generateEtiquetasPdf(labels, dados) {
         QR_CODE_URL,
         { width: 120, margin: 0, color: { dark: "#000000", light: "#ffffff" } }
       );
-      qrImgHtml = `<div style="flex-shrink:0;width:50px;height:50px;"><img src="${qrDataUrl}" style="width:50px;height:50px;display:block;" /></div>`;
+      qrImgHtml = `<div style="flex-shrink:0;width:44px;height:44px;line-height:0;"><img src="${qrDataUrl}" style="width:44px;height:44px;display:block;" /></div>`;
     } catch {}
 
     wrapper.innerHTML = `
@@ -142,9 +142,9 @@ async function generateEtiquetasPdf(labels, dados) {
           </div>
           <div><div style="font-size:6px;font-weight:900;color:#000;">DESTINATÁRIO</div><div style="font-size:${nomeDestFs}px;font-weight:800;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(nomeDest) || "—"}</div>${endDest ? `<div style="font-size:6px;color:#000;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(endDest)}</div>` : ""}</div>
           <div><div style="font-size:6px;font-weight:900;color:#000;">TRANSPORTADORA</div><div style="font-size:${transpFs}px;font-weight:800;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(transp)}</div></div>
-          <div style="flex:1;display:flex;gap:6px;align-items:flex-end;min-height:0;overflow:hidden;">
+          <div style="display:flex;gap:6px;align-items:flex-end;min-height:0;">
             <div style="flex:1;min-width:0;overflow:hidden;"><div style="font-size:6px;font-weight:900;color:#000;">PRODUTO(S)</div><div style="font-size:${prodFs}px;font-weight:700;color:#000;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${escapeHtml(produtos)}</div></div>
-            <div style="flex-shrink:0;width:50px;height:50px;">${qrImgHtml}</div>
+            <div style="flex-shrink:0;width:44px;height:44px;">${qrImgHtml}</div>
           </div>
         </div>
         <div style="border-top:1px solid #000;padding:2px 10px;display:flex;justify-content:space-between;flex-shrink:0;height:14px;align-items:center;">
@@ -378,9 +378,9 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
 // Dimensão real: 100mm x 50mm (proporção 2:1)
 function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
   const W = 378, H = 189;
-  const nomeDest = dados.nome_destinatario || "";
-  const endDest = dados.endereco_destinatario || "";
-  const transp = dados.transportadora || "";
+  const nomeDest = nota.nome_destinatario || dados.nome_destinatario || "";
+  const endDest = nota.endereco_destinatario || dados.endereco_destinatario || "";
+  const transp = nota.transportadora || dados.transportadora || "";
   const produtos = (nota.produtos || "Carga geral");
 
   const transpFs = transp.length > 40 ? 8 : transp.length > 28 ? 9 : 10;
@@ -431,18 +431,18 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
         </div>
 
         {/* Produto(s) + QR Code */}
-        <div style={{ flex: 1, display: "flex", gap: 6, alignItems: "flex-end", minHeight: 0, overflow: "hidden" }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "flex-end", minHeight: 0 }}>
           <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
             <div style={{ fontSize: 6, fontWeight: 900, color: "#000" }}>PRODUTO(S)</div>
             <div style={{ fontSize: prodFs, fontWeight: 700, color: "#000", lineHeight: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{produtos}</div>
           </div>
-          <div style={{ flexShrink: 0, width: 50, height: 50 }}>
+          <div style={{ flexShrink: 0, width: 44, height: 44, lineHeight: 0 }}>
             <QRCodeSVG
               value={QR_CODE_URL}
-              size={50}
+              size={44}
               level="M"
               includeMargin={false}
-              style={{ width: 50, height: 50, display: "block" }}
+              style={{ width: 44, height: 44, display: "block" }}
             />
           </div>
         </div>
@@ -874,6 +874,8 @@ export default function App() {
         const novasNotas = notas.map(n => ({
           numero_nf: n.numero_nf, produtos: n.produtos, quantidade_volumes: n.quantidade_volumes,
           numero_pedido: n.numero_pedido, observacoes: n.observacoes,
+          nome_destinatario: n.nome_destinatario || null,
+          endereco_destinatario: n.endereco_destinatario || null,
         }));
         const shared = {};
         for (const k of ["transportadora","cnpj_transp","endereco_transp","cidade_transp","uf_transp","telefone_transp","nome_motorista","cpf_motorista","placa_veiculo","data_retirada","horario_retirada","nome_destinatario","endereco_destinatario","chave_acesso","url_chave"]) {
@@ -929,6 +931,8 @@ export default function App() {
           quantidade_volumes: nfData.quantidade_volumes || "",
           numero_pedido: nfData.numero_pedido || "",
           observacoes: nfData.observacoes || "",
+          nome_destinatario: nfData.nome_destinatario || "",
+          endereco_destinatario: nfData.endereco_destinatario || "",
         };
 
         if (!shared.data_retirada) shared.data_retirada = new Date().toLocaleDateString("pt-BR");
