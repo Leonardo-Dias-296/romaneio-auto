@@ -1187,7 +1187,7 @@ export default function App() {
 
         {/* STEP 1 */}
         {step === 1 && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "stretch" }}>
             {/* Buscar NF pelo Bling */}
             <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: 24 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>Buscar NF pelo Bling</div>
