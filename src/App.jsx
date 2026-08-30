@@ -66,26 +66,23 @@ async function elementToOutput(element, opts = {}) {
   const pageH = pdf.internal.pageSize.getHeight();
   const margin = 5;
   const contentW = pageW - margin * 2;
-  const totalContentH = (canvas.height / canvas.width) * contentW;
-  const maxPageContentH = pageH - margin * 2;
   const x = (pageW - contentW) / 2;
 
-  if (totalContentH <= maxPageContentH) {
-    pdf.addImage(dataUrl, "PNG", x, margin, contentW, totalContentH, "", "FAST");
-  } else {
-    const totalPages = Math.ceil(totalContentH / maxPageContentH);
-    for (let page = 0; page < totalPages; page++) {
-      if (page > 0) pdf.addPage([pageW, pageH], "portrait");
-      const pageContentHmm = Math.min(maxPageContentH, totalContentH - page * maxPageContentH);
-      const srcY = Math.round((page * maxPageContentH / totalContentH) * canvas.height);
-      const srcH = Math.round((pageContentHmm / totalContentH) * canvas.height);
-      const pageCanvas = document.createElement("canvas");
-      pageCanvas.width = canvas.width;
-      pageCanvas.height = srcH;
-      const ctx = pageCanvas.getContext("2d");
-      ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
-      pdf.addImage(pageCanvas.toDataURL("image/png"), "PNG", x, margin, contentW, pageContentHmm, "", "FAST");
-    }
+  const A4_PX = Math.round(1123 * scale);
+  const totalPx = canvas.height;
+  const totalPages = Math.max(1, Math.ceil(totalPx / A4_PX));
+
+  for (let p = 0; p < totalPages; p++) {
+    if (p > 0) pdf.addPage([pageW, pageH], "portrait");
+    const srcY = p * A4_PX;
+    const srcH = Math.min(A4_PX, totalPx - srcY);
+    const pageContentHmm = (srcH / (A4_PX)) * (pageH - margin * 2);
+    const pageCanvas = document.createElement("canvas");
+    pageCanvas.width = canvas.width;
+    pageCanvas.height = srcH;
+    const ctx = pageCanvas.getContext("2d");
+    ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+    pdf.addImage(pageCanvas.toDataURL("image/png"), "PNG", x, margin, contentW, pageContentHmm, "", "FAST");
   }
 
   return { blob: pdf.output("blob"), dataUrl };
@@ -256,6 +253,8 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
   const nfHeader = isMulti ? `${notas.length} Notas Fiscais` : (notas[0]?.numero_nf ? `NF-e ${notas[0].numero_nf}` : "Romaneio de Carga");
   const wrapRef = useRef(null);
   const innerRef = useRef(null);
+  const ROWS_PER_PAGE = 20;
+  const PAGE_H = 1123;
 
   const thStyle = { background: "#0F172A", color: "#fff", fontWeight: 700, fontSize: 11, padding: "6px 10px", textTransform: "uppercase", letterSpacing: "1.5px", textAlign: "left" };
   const labelStyle = { width: "34%", padding: "6px 10px", fontWeight: 800, fontSize: 12, color: "#000", background: "#F1F5F9", borderRight: "1px solid #CBD5E1", borderBottom: "1px solid #CBD5E1", whiteSpace: "nowrap" };
@@ -264,111 +263,183 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
   const Section = ({ title }) => <tr><td colSpan={2} style={thStyle}>{title}</td></tr>;
   const Row = ({ label, value }) => <tr><td style={labelStyle}>{label}</td><td style={valueStyle}>{value || "\u00A0"}</td></tr>;
 
-  const inner = (
-    <div style={{ width: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, paddingBottom: 10, borderBottom: "2px solid #0F172A", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ minWidth: 0, flex: 1, display: "flex", gap: 12, alignItems: "center" }}>
-          <img src="/image.png" alt="Logo" style={{ height: forCapture ? 80 : 110, objectFit: "contain", flexShrink: 0 }} />
-          <div>
-            <div style={{ fontSize: forCapture ? 16 : 17, fontWeight: 900, color: "#000" }}>SOLLARSUL ENERGIA SOLAR LTDA</div>
-            <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 2 }}>CNPJ: {REMETENTE.cnpj}</div>
-            <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 1 }}>{REMETENTE.endereco}</div>
-            <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 1 }}>Tel: {REMETENTE.telefone}</div>
-          </div>
-        </div>
-        <div style={{ textAlign: "right", flexShrink: 0 }}>
-          <div style={{ fontSize: forCapture ? 15 : 14, fontWeight: 900, color: "#000", textTransform: "uppercase" }}>Romaneio de Carga</div>
-          <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 2 }}>Comprovante de Retirada</div>
-          <div style={{ marginTop: 6, display: "inline-block", border: "2px solid #0F172A", borderRadius: 4, padding: "3px 10px" }}>
-            <span style={{ fontSize: forCapture ? 13 : 13, fontWeight: 900, color: "#000" }}>{nfHeader}</span>
-          </div>
+  const HeaderBlock = () => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, paddingBottom: 10, borderBottom: "2px solid #0F172A", gap: 12, flexWrap: "wrap" }}>
+      <div style={{ minWidth: 0, flex: 1, display: "flex", gap: 12, alignItems: "center" }}>
+        <img src="/image.png" alt="Logo" style={{ height: forCapture ? 80 : 110, objectFit: "contain", flexShrink: 0 }} />
+        <div>
+          <div style={{ fontSize: forCapture ? 16 : 17, fontWeight: 900, color: "#000" }}>SOLLARSUL ENERGIA SOLAR LTDA</div>
+          <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 2 }}>CNPJ: {REMETENTE.cnpj}</div>
+          <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 1 }}>{REMETENTE.endereco}</div>
+          <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 1 }}>Tel: {REMETENTE.telefone}</div>
         </div>
       </div>
-      <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
-        <tbody>
-          <Section title="Dados da Transportadora" />
-          <Row label="Transportadora:" value={dados.transportadora} />
-          <Row label="CNPJ:" value={dados.cnpj_transp} />
-          <Row label="Endereço:" value={dados.endereco_transp} />
-          <Row label="Telefone:" value={dados.telefone_transp} />
-          <Section title="Dados do Motorista" />
-          <Row label="Nome:" value={dados.nome_motorista} />
-          <Row label="CPF / RG:" value={dados.cpf_motorista} />
-          <Row label="Placa do Veículo:" value={dados.placa_veiculo} />
-          <Section title="Informações da Retirada" />
-          <Row label="Data:" value={dados.data_retirada} />
-          <Row label="Horário:" value={dados.horario_retirada} />
-          <Row label="Observações:" value={dados.observacoes} />
-          {isMulti ? (
-            <>
-              <Section title={`Notas Fiscais (${notas.length}) — Total de Volumes: ${totalVolumes}`} />
-              <tr><td colSpan={2} style={{ padding: 0 }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr>
-                      <th style={{ ...thStyle, width: "6%" }}>#</th>
-                      <th style={{ ...thStyle, width: "20%" }}>NF-e</th>
-                      <th style={{ ...thStyle, width: "40%" }}>Produto(s)</th>
-                      <th style={{ ...thStyle, width: "14%" }}>Volumes</th>
-                      <th style={{ ...thStyle, width: "20%" }}>Pedido</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {notas.map((n, i) => (
-                      <tr key={i}>
-                        <td style={{ ...valueStyle, textAlign: "center", fontWeight: 900 }}>{i + 1}</td>
-                        <td style={{ ...valueStyle, fontWeight: 900 }}>{n.numero_nf || "—"}</td>
-                        <td style={{ ...valueStyle, lineHeight: 1.3 }}>{n.produtos || "—"}</td>
-                        <td style={{ ...valueStyle, textAlign: "center" }}>{n.quantidade_volumes || "1"}</td>
-                        <td style={{ ...valueStyle }}>{n.numero_pedido || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </td></tr>
-            </>
-          ) : (
-            <>
+      <div style={{ textAlign: "right", flexShrink: 0 }}>
+        <div style={{ fontSize: forCapture ? 15 : 14, fontWeight: 900, color: "#000", textTransform: "uppercase" }}>Romaneio de Carga</div>
+        <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 2 }}>Comprovante de Retirada</div>
+        <div style={{ marginTop: 6, display: "inline-block", border: "2px solid #0F172A", borderRadius: 4, padding: "3px 10px" }}>
+          <span style={{ fontSize: 13, fontWeight: 900, color: "#000" }}>{nfHeader}</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const InfoBlock = () => (
+    <>
+      <Section title="Dados da Transportadora" />
+      <Row label="Transportadora:" value={dados.transportadora} />
+      <Row label="CNPJ:" value={dados.cnpj_transp} />
+      <Row label="Endereço:" value={dados.endereco_transp} />
+      <Row label="Telefone:" value={dados.telefone_transp} />
+      <Section title="Dados do Motorista" />
+      <Row label="Nome:" value={dados.nome_motorista} />
+      <Row label="CPF / RG:" value={dados.cpf_motorista} />
+      <Row label="Placa do Veículo:" value={dados.placa_veiculo} />
+      <Section title="Informações da Retirada" />
+      <Row label="Data:" value={dados.data_retirada} />
+      <Row label="Horário:" value={dados.horario_retirada} />
+      <Row label="Observações:" value={dados.observacoes} />
+    </>
+  );
+
+  const NotasTableHead = () => (
+    <thead>
+      <tr>
+        <th style={{ ...thStyle, width: "6%" }}>#</th>
+        <th style={{ ...thStyle, width: "20%" }}>NF-e</th>
+        <th style={{ ...thStyle, width: "40%" }}>Produto(s)</th>
+        <th style={{ ...thStyle, width: "14%" }}>Volumes</th>
+        <th style={{ ...thStyle, width: "20%" }}>Pedido</th>
+      </tr>
+    </thead>
+  );
+
+  const NotasRow = ({ n, idx }) => (
+    <tr>
+      <td style={{ ...valueStyle, textAlign: "center", fontWeight: 900 }}>{idx}</td>
+      <td style={{ ...valueStyle, fontWeight: 900 }}>{n.numero_nf || "—"}</td>
+      <td style={{ ...valueStyle, lineHeight: 1.3 }}>{n.produtos || "—"}</td>
+      <td style={{ ...valueStyle, textAlign: "center" }}>{n.quantidade_volumes || "1"}</td>
+      <td style={{ ...valueStyle }}>{n.numero_pedido || "—"}</td>
+    </tr>
+  );
+
+  const SignaturesBlock = () => (
+    <>
+      <tr><td colSpan={2} style={thStyle}>Assinaturas</td></tr>
+      <tr>
+        <td colSpan={2} style={{ padding: 0 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", height: forCapture ? 130 : 80 }}>
+            {["Assinatura do Motorista", "Assinatura do Responsável do CD"].map((label, i) => (
+              <div key={i} style={{ padding: forCapture ? "16px 16px 80px" : "14px 16px 60px", position: "relative", borderRight: i === 0 ? "1px solid #CBD5E1" : "none", display: "flex", alignItems: "flex-end" }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: "#1E293B", textTransform: "uppercase", letterSpacing: .5 }}>{label}</span>
+                <div style={{ position: "absolute", bottom: 24, left: 16, right: 16, height: 1.5, background: "#0F172A" }} />
+              </div>
+            ))}
+          </div>
+        </td>
+      </tr>
+    </>
+  );
+
+  const FooterLine = () => (
+    <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontSize: 10, color: "#1E293B", fontWeight: 600, flexWrap: "wrap", gap: 4 }}>
+      <span>SOLLARSUL ENERGIA SOLAR LTDA — Taquari/RS</span>
+      {userEmail && <span>Gerado por: {userEmail}</span>}
+      <span>Gerado em: {new Date().toLocaleString("pt-BR")}</span>
+    </div>
+  );
+
+  if (!forCapture) {
+    const inner = (
+      <div style={{ width: "100%", display: "flex", flexDirection: "column" }}>
+        <HeaderBlock />
+        <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
+          <tbody>
+            <InfoBlock />
+            {isMulti ? (
+              <>
+                <Section title={`Notas Fiscais (${notas.length}) — Total de Volumes: ${totalVolumes}`} />
+                <tr><td colSpan={2} style={{ padding: 0 }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <NotasTableHead />
+                    <tbody>{notas.map((n, i) => <NotasRow key={i} n={n} idx={i + 1} />)}</tbody>
+                  </table>
+                </td></tr>
+              </>
+            ) : (
+              <>
+                <Row label="N. da NF:" value={notas[0]?.numero_nf} />
+                <Row label="Pedido:" value={notas[0]?.numero_pedido} />
+                <Section title="Descrição da Mercadoria" />
+                <Row label="Produto(s):" value={notas[0]?.produtos} />
+                <Row label="Quantidade de Volumes:" value={notas[0]?.quantidade_volumes} />
+              </>
+            )}
+            <SignaturesBlock />
+          </tbody>
+        </table>
+        <FooterLine />
+      </div>
+    );
+    return <div style={{ background: "#fff", border: "1px solid #CBD5E1", borderRadius: 10, overflow: "hidden" }}>{inner}</div>;
+  }
+
+  // forCapture: render each page as a fixed-height div (A4 = 794x1123px)
+  if (!isMulti) {
+    const singlePage = (
+      <div style={{ width: 794, height: PAGE_H, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box", overflow: "hidden", position: "relative" }}>
+        <div style={{ padding: "16px 20px" }}>
+          <HeaderBlock />
+          <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
+            <tbody>
+              <InfoBlock />
               <Row label="N. da NF:" value={notas[0]?.numero_nf} />
               <Row label="Pedido:" value={notas[0]?.numero_pedido} />
               <Section title="Descrição da Mercadoria" />
               <Row label="Produto(s):" value={notas[0]?.produtos} />
               <Row label="Quantidade de Volumes:" value={notas[0]?.quantidade_volumes} />
-            </>
-          )}
-          <tr><td colSpan={2} style={thStyle}>Assinaturas</td></tr>
-          <tr>
-            <td colSpan={2} style={{ padding: 0, height: "100%" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", height: forCapture ? 130 : 80 }}>
-                {["Assinatura do Motorista", "Assinatura do Responsável do CD"].map((label, i) => (
-                  <div key={i} style={{ padding: forCapture ? "16px 16px 80px" : "14px 16px 60px", position: "relative", borderRight: i === 0 ? "1px solid #CBD5E1" : "none", display: "flex", alignItems: "flex-end" }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: "#1E293B", textTransform: "uppercase", letterSpacing: .5 }}>{label}</span>
-                    <div style={{ position: "absolute", bottom: 24, left: 16, right: 16, height: 1.5, background: "#0F172A" }} />
-                  </div>
-                ))}
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontSize: 10, color: "#1E293B", fontWeight: 600, flexWrap: "wrap", gap: 4 }}>
-        <span>SOLLARSUL ENERGIA SOLAR LTDA — Taquari/RS</span>
-        {userEmail && <span>Gerado por: {userEmail}</span>}
-        <span>Gerado em: {new Date().toLocaleString("pt-BR")}</span>
+              <SignaturesBlock />
+            </tbody>
+          </table>
+          <FooterLine />
+        </div>
       </div>
-    </div>
-  );
-
-  if (!forCapture) {
-    return <div style={{ background: "#fff", border: "1px solid #CBD5E1", borderRadius: 10, overflow: "hidden" }}>{inner}</div>;
+    );
+    return <div ref={wrapRef}>{singlePage}</div>;
   }
 
-  return (
-    <div ref={wrapRef} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box", position: "relative" }}>
-      <div ref={innerRef} style={{ width: 794 }}>
-        {inner}
+  const totalPages = Math.ceil(notas.length / ROWS_PER_PAGE);
+  const pages = [];
+  for (let p = 0; p < totalPages; p++) {
+    const start = p * ROWS_PER_PAGE;
+    const chunk = notas.slice(start, start + ROWS_PER_PAGE);
+    const isLast = p === totalPages - 1;
+    pages.push(
+      <div key={p} style={{ width: 794, height: PAGE_H, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box", overflow: "hidden", position: "relative" }}>
+        <div style={{ padding: "16px 20px" }}>
+          {p === 0 && <HeaderBlock />}
+          <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
+            <tbody>
+              {p === 0 && <InfoBlock />}
+              <Section title={`Notas Fiscais (${notas.length}) — Total de Volumes: ${totalVolumes}${p > 0 ? " (continuação)" : ""}`} />
+              <tr><td colSpan={2} style={{ padding: 0 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <NotasTableHead />
+                  <tbody>{chunk.map((n, i) => <NotasRow key={i} n={n} idx={start + i + 1} />)}</tbody>
+                </table>
+              </td></tr>
+              {isLast && <SignaturesBlock />}
+            </tbody>
+          </table>
+          <FooterLine />
+        </div>
       </div>
-    </div>
+    );
+  }
+
+  return <div ref={wrapRef}>{pages}</div>;
+}
   );
 }
 
