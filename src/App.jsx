@@ -440,8 +440,6 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
 
   return <div ref={wrapRef}>{pages}</div>;
 }
-  );
-}
 
 // ── Etiqueta ───────────────────────────────────────────────────
 // Dimensão real: 100mm x 50mm (proporção 2:1)
