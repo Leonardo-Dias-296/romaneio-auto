@@ -252,7 +252,6 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
   const totalVolumes = notas.reduce((s, n) => s + (parseInt(n.quantidade_volumes) || 1), 0);
   const nfHeader = isMulti ? `${notas.length} Notas Fiscais` : (notas[0]?.numero_nf ? `NF-e ${notas[0].numero_nf}` : "Romaneio de Carga");
   const wrapRef = useRef(null);
-  const innerRef = useRef(null);
   const ROWS_PER_PAGE = 20;
   const PAGE_H = 1123;
 
@@ -350,85 +349,88 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
     </div>
   );
 
-  if (!forCapture) {
-    const inner = (
+  const buildTableForChunk = (chunkNotas, startIdx) => (
+    <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
+      <tbody>
+        <Section title={`Notas Fiscais (${notas.length}) — Total de Volumes: ${totalVolumes}${startIdx > 0 ? " (continuação)" : ""}`} />
+        <tr><td colSpan={2} style={{ padding: 0 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <NotasTableHead />
+            <tbody>{chunkNotas.map((n, i) => <NotasRow key={i} n={n} idx={startIdx + i + 1} />)}</tbody>
+          </table>
+        </td></tr>
+      </tbody>
+    </table>
+  );
+
+  if (!isMulti) {
+    const singlePage = (
       <div style={{ width: "100%", display: "flex", flexDirection: "column" }}>
         <HeaderBlock />
         <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
           <tbody>
             <InfoBlock />
-            {isMulti ? (
-              <>
-                <Section title={`Notas Fiscais (${notas.length}) — Total de Volumes: ${totalVolumes}`} />
-                <tr><td colSpan={2} style={{ padding: 0 }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <NotasTableHead />
-                    <tbody>{notas.map((n, i) => <NotasRow key={i} n={n} idx={i + 1} />)}</tbody>
-                  </table>
-                </td></tr>
-              </>
-            ) : (
-              <>
-                <Row label="N. da NF:" value={notas[0]?.numero_nf} />
-                <Row label="Pedido:" value={notas[0]?.numero_pedido} />
-                <Section title="Descrição da Mercadoria" />
-                <Row label="Produto(s):" value={notas[0]?.produtos} />
-                <Row label="Quantidade de Volumes:" value={notas[0]?.quantidade_volumes} />
-              </>
-            )}
+            <Row label="N. da NF:" value={notas[0]?.numero_nf} />
+            <Row label="Pedido:" value={notas[0]?.numero_pedido} />
+            <Section title="Descrição da Mercadoria" />
+            <Row label="Produto(s):" value={notas[0]?.produtos} />
+            <Row label="Quantidade de Volumes:" value={notas[0]?.quantidade_volumes} />
             <SignaturesBlock />
           </tbody>
         </table>
         <FooterLine />
       </div>
     );
-    return <div style={{ background: "#fff", border: "1px solid #CBD5E1", borderRadius: 10, overflow: "hidden" }}>{inner}</div>;
-  }
-
-  // forCapture: render each page as a fixed-height div (A4 = 794x1123px)
-  if (!isMulti) {
-    const singlePage = (
-      <div style={{ width: 794, height: PAGE_H, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box", overflow: "hidden", position: "relative" }}>
-        <div style={{ padding: "16px 20px" }}>
-          <HeaderBlock />
-          <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
-            <tbody>
-              <InfoBlock />
-              <Row label="N. da NF:" value={notas[0]?.numero_nf} />
-              <Row label="Pedido:" value={notas[0]?.numero_pedido} />
-              <Section title="Descrição da Mercadoria" />
-              <Row label="Produto(s):" value={notas[0]?.produtos} />
-              <Row label="Quantidade de Volumes:" value={notas[0]?.quantidade_volumes} />
-              <SignaturesBlock />
-            </tbody>
-          </table>
-          <FooterLine />
+    if (!forCapture) {
+      return <div style={{ background: "#fff", border: "1px solid #CBD5E1", borderRadius: 10, overflow: "hidden" }}>{singlePage}</div>;
+    }
+    return (
+      <div ref={wrapRef} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box" }}>
+        <div style={{ width: 794, height: PAGE_H, overflow: "hidden" }}>
+          <div style={{ padding: "16px 20px" }}>{singlePage}</div>
         </div>
       </div>
     );
-    return <div ref={wrapRef}>{singlePage}</div>;
   }
 
   const totalPages = Math.ceil(notas.length / ROWS_PER_PAGE);
-  const pages = [];
-  for (let p = 0; p < totalPages; p++) {
+
+  if (!forCapture) {
+    const pageBlocks = Array.from({ length: totalPages }, (_, p) => {
+      const start = p * ROWS_PER_PAGE;
+      const chunk = notas.slice(start, start + ROWS_PER_PAGE);
+      const isLast = p === totalPages - 1;
+      return (
+        <div key={p} style={{ background: "#fff", border: "1px solid #CBD5E1", borderRadius: 10, overflow: "hidden", marginBottom: p < totalPages - 1 ? 16 : 0 }}>
+          <div style={{ padding: "16px 20px" }}>
+            {p === 0 && <HeaderBlock />}
+            <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
+              <tbody>
+                {p === 0 && <InfoBlock />}
+                {buildTableForChunk(chunk, start)}
+                {isLast && <SignaturesBlock />}
+              </tbody>
+            </table>
+            <FooterLine />
+          </div>
+        </div>
+      );
+    });
+    return <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>{pageBlocks}</div>;
+  }
+
+  const pages = Array.from({ length: totalPages }, (_, p) => {
     const start = p * ROWS_PER_PAGE;
     const chunk = notas.slice(start, start + ROWS_PER_PAGE);
     const isLast = p === totalPages - 1;
-    pages.push(
+    return (
       <div key={p} style={{ width: 794, height: PAGE_H, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box", overflow: "hidden", position: "relative" }}>
         <div style={{ padding: "16px 20px" }}>
           {p === 0 && <HeaderBlock />}
           <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
             <tbody>
               {p === 0 && <InfoBlock />}
-              <Section title={`Notas Fiscais (${notas.length}) — Total de Volumes: ${totalVolumes}${p > 0 ? " (continuação)" : ""}`} />
-              <tr><td colSpan={2} style={{ padding: 0 }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <NotasTableHead />
-                  <tbody>{chunk.map((n, i) => <NotasRow key={i} n={n} idx={start + i + 1} />)}</tbody>
-                </table>
-              </td></tr>
+              {buildTableForChunk(chunk, start)}
               {isLast && <SignaturesBlock />}
             </tbody>
           </table>
@@ -436,9 +438,13 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
         </div>
       </div>
     );
-  }
+  });
 
-  return <div ref={wrapRef}>{pages}</div>;
+  return (
+    <div ref={wrapRef} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box" }}>
+      {pages}
+    </div>
+  );
 }
 
 // ── Etiqueta ───────────────────────────────────────────────────
