@@ -900,26 +900,23 @@ export default function App() {
     if (chaves.length === 0) { alert("NFs selecionadas não possuem chave de acesso."); return; }
     setDanfeLoading(true);
     try {
-      const r = await fetch(`/api/bling?action=downloadDanfeBatch&chaves=${chaves.join(",")}`, { credentials: "include" });
-      if (!r.ok) { const d = await r.json().catch(() => ({})); alert(d.erro || "Erro ao baixar DANFEs"); return; }
-      const data = await r.json();
       let baixados = 0;
-      for (const item of (data.results || [])) {
-        if (item.ok && item.pdf) {
-          const bin = atob(item.pdf);
-          const bytes = new Uint8Array(bin.length);
-          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-          const blob = new Blob([bytes], { type: "application/pdf" });
+      for (const chave of chaves) {
+        try {
+          const r = await fetch(`/api/bling?action=downloadDanfe&chaveAcesso=${chave}`, { credentials: "include" });
+          if (!r.ok) continue;
+          const blob = await r.blob();
+          if (blob.size < 100) continue;
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
-          a.download = `DANFE_${item.chave}.pdf`;
+          a.download = `DANFE_${chave}.pdf`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
           baixados++;
-        }
+        } catch {}
       }
       if (baixados > 0) alert(`${baixados} DANFE(s) baixado(s)!`);
       else alert("Nenhum DANFE pôde ser baixado.");
