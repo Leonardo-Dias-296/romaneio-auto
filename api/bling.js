@@ -369,6 +369,8 @@ export default async function handler(req, res) {
 
         const respBuffer = Buffer.from(await r.arrayBuffer());
 
+        console.log("[bling-danfe] status:", r.status, "size:", respBuffer.length, "firstBytes:", respBuffer.slice(0, 50).toString("utf8").replace(/[^\x20-\x7E]/g, "?"));
+
         let pdfBuffer = null;
         const firstBytes = respBuffer.slice(0, 4).toString("ascii");
 
@@ -376,8 +378,10 @@ export default async function handler(req, res) {
           pdfBuffer = respBuffer;
         } else {
           const respText = respBuffer.toString("utf8");
+          console.log("[bling-danfe] not raw PDF, text preview:", respText.substring(0, 300));
           try {
             const jsonData = JSON.parse(respText);
+            console.log("[bling-danfe] JSON keys:", Object.keys(jsonData), "data keys:", Object.keys(jsonData.data || {}));
             const candidates = [
               jsonData.data?.documento,
               jsonData.data?.danfe,
