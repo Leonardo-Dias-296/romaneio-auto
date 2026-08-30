@@ -124,9 +124,9 @@ async function generateEtiquetasPdf(labels, dados) {
     try {
       const qrDataUrl = await QRCode.toDataURL(
         QR_CODE_URL,
-        { width: 120, margin: 0, color: { dark: "#000000", light: "#ffffff" } }
+        { width: 120, margin: 2, color: { dark: "#000000", light: "#ffffff" } }
       );
-      qrImgHtml = `<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;line-height:0;"><div style="font-size:5px;font-weight:900;color:#000;margin-bottom:1px;letter-spacing:0.5px;">Friclim.com</div><img src="${qrDataUrl}" style="width:44px;height:44px;display:block;" /></div>`;
+      qrImgHtml = `<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;"><div style="font-size:5px;font-weight:900;color:#000;margin-bottom:2px;letter-spacing:0.5px;line-height:1;">Friclim.com</div><img src="${qrDataUrl}" style="width:48px;height:48px;display:block;" /></div>`;
     } catch {}
 
     wrapper.innerHTML = `
@@ -436,14 +436,15 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
             <div style={{ fontSize: 6, fontWeight: 900, color: "#000" }}>PRODUTO(S)</div>
             <div style={{ fontSize: prodFs, fontWeight: 700, color: "#000", lineHeight: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{produtos}</div>
           </div>
-          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", lineHeight: 0 }}>
-            <div style={{ fontSize: 5, fontWeight: 900, color: "#000", marginBottom: 1, letterSpacing: 0.5 }}>Friclim.com</div>
+          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div style={{ fontSize: 5, fontWeight: 900, color: "#000", marginBottom: 2, letterSpacing: 0.5, lineHeight: 1 }}>Friclim.com</div>
             <QRCodeSVG
               value={QR_CODE_URL}
               size={44}
               level="M"
-              includeMargin={false}
-              style={{ width: 44, height: 44, display: "block" }}
+              includeMargin={true}
+              marginSize={2}
+              style={{ width: 48, height: 48, display: "block" }}
             />
           </div>
         </div>
@@ -1101,47 +1102,47 @@ export default function App() {
               <div style={{ fontSize: 12, color: "#64748B", fontWeight: 600, marginTop: 4 }}>{modoCadastro ? "Crie sua conta" : "Faça login para continuar"}</div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {modoCadastro && (
+                {modoCadastro && (
+                  <div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.8px" }}>Nome</span>
+                    <input value={loginNome} onChange={e => setLoginNome(e.target.value)} placeholder="Seu nome"
+                      style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "9px 12px", fontSize: 14, fontFamily: "inherit", outline: "none", marginTop: 4, boxSizing: "border-box" }}
+                      onKeyDown={e => e.key === "Enter" && handleCadastro()} />
+                  </div>
+                )}
                 <div>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.8px" }}>Nome</span>
-                  <input value={loginNome} onChange={e => setLoginNome(e.target.value)} placeholder="Seu nome"
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.8px" }}>Email</span>
+                  <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} placeholder="seu@email.com"
                     style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "9px 12px", fontSize: 14, fontFamily: "inherit", outline: "none", marginTop: 4, boxSizing: "border-box" }}
-                    onKeyDown={e => e.key === "Enter" && handleCadastro()} />
-                </div>
-              )}
-              <div>
-                <span style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.8px" }}>Email</span>
-                <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} placeholder="seu@email.com"
-                  style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "9px 12px", fontSize: 14, fontFamily: "inherit", outline: "none", marginTop: 4, boxSizing: "border-box" }}
-                  onKeyDown={e => e.key === "Enter" && (modoCadastro ? handleCadastro() : handleLogin())} />
-              </div>
-              <div>
-                <span style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.8px" }}>Senha</span>
-                <div style={{ position: "relative", marginTop: 4 }}>
-                  <input type={showSenha ? "text" : "password"} value={loginSenha} onChange={e => setLoginSenha(e.target.value)} placeholder="Sua senha"
-                    style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "9px 36px 9px 12px", fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
                     onKeyDown={e => e.key === "Enter" && (modoCadastro ? handleCadastro() : handleLogin())} />
-                  <button type="button" onClick={() => setShowSenha(!showSenha)}
-                    style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "#94A3B8", fontSize: 11, fontWeight: 700, fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                    {showSenha ? "OCULTAR" : "VER"}
+                </div>
+                <div>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.8px" }}>Senha</span>
+                  <div style={{ position: "relative", marginTop: 4 }}>
+                    <input type={showSenha ? "text" : "password"} value={loginSenha} onChange={e => setLoginSenha(e.target.value)} placeholder="Sua senha"
+                      style={{ width: "100%", border: "1px solid #CBD5E1", borderRadius: 6, padding: "9px 36px 9px 12px", fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                      onKeyDown={e => e.key === "Enter" && (modoCadastro ? handleCadastro() : handleLogin())} />
+                    <button type="button" onClick={() => setShowSenha(!showSenha)}
+                      style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "#94A3B8", fontSize: 11, fontWeight: 700, fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      {showSenha ? "OCULTAR" : "VER"}
+                    </button>
+                  </div>
+                </div>
+                {loginErro && <div style={{ color: "#EF4444", fontSize: 12, fontWeight: 600, textAlign: "center" }}>{loginErro}</div>}
+                {loginSucesso && <div style={{ color: "#16A34A", fontSize: 12, fontWeight: 600, textAlign: "center" }}>{loginSucesso}</div>}
+                <button onClick={modoCadastro ? handleCadastro : handleLogin} disabled={loginBusy}
+                  style={{ background: loginBusy ? "#94A3B8" : "#0F172A", color: "#fff", border: "none", padding: "11px 0", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: loginBusy ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+                  {loginBusy ? (modoCadastro ? "Criando..." : "Entrando...") : (modoCadastro ? "Criar Conta" : "Entrar")}
+                </button>
+                <div style={{ textAlign: "center", marginTop: 4 }}>
+                  <span style={{ fontSize: 12, color: "#64748B" }}>
+                    {modoCadastro ? "Já tem conta? " : "Não tem conta? "}
+                  </span>
+                  <button onClick={() => { setModoCadastro(!modoCadastro); setLoginErro(""); setLoginSucesso(""); }}
+                    style={{ background: "none", border: "none", color: "#0F172A", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", textDecoration: "underline" }}>
+                    {modoCadastro ? "Fazer login" : "Criar conta"}
                   </button>
                 </div>
-              </div>
-              {loginErro && <div style={{ color: "#EF4444", fontSize: 12, fontWeight: 600, textAlign: "center" }}>{loginErro}</div>}
-              {loginSucesso && <div style={{ color: "#16A34A", fontSize: 12, fontWeight: 600, textAlign: "center" }}>{loginSucesso}</div>}
-              <button onClick={modoCadastro ? handleCadastro : handleLogin} disabled={loginBusy}
-                style={{ background: loginBusy ? "#94A3B8" : "#0F172A", color: "#fff", border: "none", padding: "11px 0", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: loginBusy ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
-                {loginBusy ? (modoCadastro ? "Criando..." : "Entrando...") : (modoCadastro ? "Criar Conta" : "Entrar")}
-              </button>
-              <div style={{ textAlign: "center", marginTop: 4 }}>
-                <span style={{ fontSize: 12, color: "#64748B" }}>
-                  {modoCadastro ? "Já tem conta? " : "Não tem conta? "}
-                </span>
-                <button onClick={() => { setModoCadastro(!modoCadastro); setLoginErro(""); setLoginSucesso(""); }}
-                  style={{ background: "none", border: "none", color: "#0F172A", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", textDecoration: "underline" }}>
-                  {modoCadastro ? "Fazer login" : "Criar conta"}
-                </button>
-              </div>
             </div>
           </div>
         </div>
