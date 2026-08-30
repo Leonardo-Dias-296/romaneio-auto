@@ -64,24 +64,30 @@ async function elementToOutput(element, opts = {}) {
 
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
-  const margin = 5; // mm
-  // largura disponível para o conteúdo
-  let contentW = pageW - margin * 2;
-  // converte proporção do canvas para altura em mm
-  let contentH = (canvas.height / canvas.width) * contentW;
+  const margin = 5;
+  const contentW = pageW - margin * 2;
+  const totalContentH = (canvas.height / canvas.width) * contentW;
+  const maxPageContentH = pageH - margin * 2;
+  const x = (pageW - contentW) / 2;
 
-  // Se a altura calculada extrapolar a altura imprimível, reduz proporcionalmente
-  const maxContentH = pageH - margin * 2;
-  if (contentH > maxContentH) {
-    const scaleFactor = maxContentH / contentH;
-    contentW = contentW * scaleFactor;
-    contentH = contentH * scaleFactor;
+  if (totalContentH <= maxPageContentH) {
+    pdf.addImage(dataUrl, "PNG", x, margin, contentW, totalContentH, "", "FAST");
+  } else {
+    const totalPages = Math.ceil(totalContentH / maxPageContentH);
+    for (let page = 0; page < totalPages; page++) {
+      if (page > 0) pdf.addPage([pageW, pageH], "portrait");
+      const pageContentHmm = Math.min(maxPageContentH, totalContentH - page * maxPageContentH);
+      const srcY = Math.round((page * maxPageContentH / totalContentH) * canvas.height);
+      const srcH = Math.round((pageContentHmm / totalContentH) * canvas.height);
+      const pageCanvas = document.createElement("canvas");
+      pageCanvas.width = canvas.width;
+      pageCanvas.height = srcH;
+      const ctx = pageCanvas.getContext("2d");
+      ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+      pdf.addImage(pageCanvas.toDataURL("image/png"), "PNG", x, margin, contentW, pageContentHmm, "", "FAST");
+    }
   }
 
-  // centraliza horizontalmente
-  const x = (pageW - contentW) / 2;
-  const y = margin;
-  pdf.addImage(dataUrl, "PNG", x, y, contentW, contentH, "", "FAST");
   return { blob: pdf.output("blob"), dataUrl };
 }
 
@@ -250,14 +256,6 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
   const nfHeader = isMulti ? `${notas.length} Notas Fiscais` : (notas[0]?.numero_nf ? `NF-e ${notas[0].numero_nf}` : "Romaneio de Carga");
   const wrapRef = useRef(null);
   const innerRef = useRef(null);
-  const [scale, setScale] = useState(1);
-
-  useEffect(() => {
-    if (!forCapture || !wrapRef.current || !innerRef.current) return;
-    const A4_HEIGHT = 1123;
-    const contentH = innerRef.current.scrollHeight;
-    setScale(contentH > A4_HEIGHT ? A4_HEIGHT / contentH : 1);
-  }, [dados, forCapture]);
 
   const thStyle = { background: "#0F172A", color: "#fff", fontWeight: 700, fontSize: 11, padding: "6px 10px", textTransform: "uppercase", letterSpacing: "1.5px", textAlign: "left" };
   const labelStyle = { width: "34%", padding: "6px 10px", fontWeight: 800, fontSize: 12, color: "#000", background: "#F1F5F9", borderRight: "1px solid #CBD5E1", borderBottom: "1px solid #CBD5E1", whiteSpace: "nowrap" };
@@ -366,8 +364,8 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
   }
 
   return (
-    <div ref={wrapRef} style={{ width: 794, height: 1123, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box", overflow: "hidden", position: "relative" }}>
-      <div ref={innerRef} style={{ transformOrigin: "top left", transform: `scale(${scale})`, width: 794, height: 1123 }}>
+    <div ref={wrapRef} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box", position: "relative" }}>
+      <div ref={innerRef} style={{ width: 794 }}>
         {inner}
       </div>
     </div>
