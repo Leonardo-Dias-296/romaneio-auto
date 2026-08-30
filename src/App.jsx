@@ -901,12 +901,23 @@ export default function App() {
     setDanfeLoading(true);
     try {
       let baixados = 0;
+      let erros = [];
       for (const chave of chaves) {
         try {
           const r = await fetch(`/api/bling?action=downloadDanfe&chaveAcesso=${chave}`, { credentials: "include" });
-          if (!r.ok) continue;
+          if (!r.ok) {
+            const errData = await r.json().catch(() => ({}));
+            erros.push(errData.erro || `HTTP ${r.status}`);
+            continue;
+          }
+          const ct = r.headers.get("content-type") || "";
+          if (ct.includes("json")) {
+            const errData = await r.json().catch(() => ({}));
+            erros.push(errData.erro || "Resposta JSON inesperada");
+            continue;
+          }
           const blob = await r.blob();
-          if (blob.size < 100) continue;
+          if (blob.size < 100) { erros.push(`DANFE ${chave}: arquivo muito pequeno`); continue; }
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
@@ -916,10 +927,11 @@ export default function App() {
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
           baixados++;
-        } catch {}
+        } catch (e) { erros.push(`DANFE ${chave}: ${e.message}`); }
       }
-      if (baixados > 0) alert(`${baixados} DANFE(s) baixado(s)!`);
-      else alert("Nenhum DANFE pôde ser baixado.");
+      let msg = baixados > 0 ? `${baixados} DANFE(s) baixado(s)!` : "Nenhum DANFE pôde ser baixado.";
+      if (erros.length > 0) msg += "\n\nErros:\n" + erros.join("\n");
+      alert(msg);
     } catch (e) { alert("Erro: " + e.message); }
     finally { setDanfeLoading(false); }
   }

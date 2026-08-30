@@ -350,25 +350,68 @@ export default async function handler(req, res) {
       try {
         const accessToken = await getValidToken();
         if (!accessToken) return res.status(401).json({ erro: "Token inválido." });
-        const r = await fetch(`${process.env.BLING_BASE_URL || "https://api.bling.com.br/Api/v3"}/nfe/documento/${chaveAcesso}?formato=pdf`, {
+        const BLING_BASE_URL = process.env.BLING_BASE_URL || "https://api.bling.com.br/Api/v3";
+
+        const r = await fetch(`${BLING_BASE_URL}/nfe/documento/${chaveAcesso}?formato=pdf`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${accessToken}`,
             "enable-jwt": "1",
             Accept: "1.0",
           },
-          signal: AbortSignal.timeout(20000),
+          signal: AbortSignal.timeout(30000),
         });
+
         if (!r.ok) {
-          const err = await r.text();
-          return res.status(r.status).json({ erro: `Erro Bling: ${err}` });
+          const errText = await r.text();
+          return res.status(r.status).json({ erro: `Erro Bling (${r.status}): ${errText.substring(0, 500)}` });
         }
-        const contentType = r.headers.get("content-type") || "application/pdf";
+
+        const respBuffer = Buffer.from(await r.arrayBuffer());
+
+        let pdfBuffer = null;
+        const firstBytes = respBuffer.slice(0, 4).toString("ascii");
+
+        if (firstBytes === "%PDF") {
+          pdfBuffer = respBuffer;
+        } else {
+          const respText = respBuffer.toString("utf8");
+          try {
+            const jsonData = JSON.parse(respText);
+            const candidates = [
+              jsonData.data?.documento,
+              jsonData.data?.danfe,
+              jsonData.data?.pdf,
+              jsonData.documento,
+              jsonData.danfe,
+              jsonData.pdf,
+              typeof jsonData.data === "string" ? jsonData.data : null,
+            ];
+            for (const c of candidates) {
+              if (c && typeof c === "string" && c.length > 100) {
+                const decoded = Buffer.from(c, "base64");
+                if (decoded[0] === 0x25) {
+                  pdfBuffer = decoded;
+                  break;
+                }
+              }
+            }
+          } catch {
+            const decoded = Buffer.from(respText, "base64");
+            if (decoded[0] === 0x25 && decoded.length > 100) {
+              pdfBuffer = decoded;
+            }
+          }
+        }
+
+        if (!pdfBuffer || pdfBuffer.length < 100 || pdfBuffer[0] !== 0x25) {
+          return res.status(400).json({ erro: "Não foi possível obter o PDF da DANFE. Resposta inválida do Bling." });
+        }
+
         const filename = `DANFE_${chaveAcesso}.pdf`;
-        res.setHeader("Content-Type", contentType);
-        res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
-        const buffer = Buffer.from(await r.arrayBuffer());
-        return res.status(200).send(buffer);
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+        return res.status(200).send(pdfBuffer);
       } catch (e) {
         return res.status(500).json({ erro: "Erro ao baixar DANFE: " + e.message });
       }
