@@ -1294,6 +1294,19 @@ export default function App() {
                   <a href="/api/bling?action=test" target="_blank" style={{ fontSize: 11, color: "#64748B", textDecoration: "underline", cursor: "pointer" }}>Testar conexão</a>
                 )}
               </div>
+              <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 6 }}>
+                {[
+                  { color: "#2563EB", icon: "🔗", text: "Antes de iniciar, clique em", bold: "Testar conexão", extra: "e depois busque as notas." },
+                  { color: "#2563EB", icon: "📋", text: "Em", bold: "Listar NFs do Bling", extra: "você poderá fazer download do PDF da nota." },
+                  { color: "#16A34A", icon: "✓", text: "", bold: "Bling conectado", extra: "significa que está tudo ok." },
+                  { color: "#EF4444", icon: "🔄", text: "", bold: "Reconectar", extra: "você poderá se reconectar ao login do Bling se sair por algum motivo." },
+                ].map((tip, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 6, fontSize: 11, color: "#64748B", lineHeight: 1.4 }}>
+                    <span style={{ flexShrink: 0 }}>{tip.icon}</span>
+                    <span>{tip.text} <span style={{ fontWeight: 700, color: tip.color }}>{tip.bold}</span> {tip.extra}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Envio de arquivos */}
