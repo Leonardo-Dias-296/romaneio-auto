@@ -441,7 +441,7 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
   });
 
   return (
-    <div ref={wrapRef} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box" }}>
+    <div ref={wrapRef} style={{ width: 794, height: PAGE_H * totalPages, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box", overflow: "hidden" }}>
       {pages}
     </div>
   );
@@ -1293,7 +1293,7 @@ export default function App() {
               </div>
               <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 6 }}>
                 {[
-                  { color: "#2563EB", icon: "🔗", text: "Antes de iniciar, clique em", bold: "Testar conexão", extra: "e depois busque as notas." },
+                  { color: "#2563EB", icon: "🔗", text: "Antes de iniciar, clique em", bold: "Testar conexão", extra: "ira aparecer \"ok\":true,\"count\":5 o que significa que esta tudo ok, e apos isso pode buscar as notas." },
                   { color: "#2563EB", icon: "📋", text: "Em", bold: "Listar NFs do Bling", extra: "você poderá fazer download do PDF da nota." },
                   { color: "#16A34A", icon: "✓", text: "", bold: "Bling conectado", extra: "significa que está tudo ok." },
                   { color: "#EF4444", icon: "🔄", text: "", bold: "Reconectar", extra: "você poderá se reconectar ao login do Bling se sair por algum motivo." },
