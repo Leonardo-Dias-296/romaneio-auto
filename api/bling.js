@@ -409,7 +409,8 @@ export default async function handler(req, res) {
         }
 
         if (!pdfBuffer || pdfBuffer.length < 100 || pdfBuffer[0] !== 0x25) {
-          return res.status(400).json({ erro: "Não foi possível obter o PDF da DANFE. Resposta inválida do Bling." });
+          const respText = respBuffer.toString("utf8").substring(0, 500);
+          return res.status(400).json({ erro: "Não foi possível obter o PDF da DANFE.", debug: { status: r.status, size: respBuffer.length, firstHex: respBuffer.slice(0, 20).toString("hex"), textPreview: respText } });
         }
 
         const filename = `DANFE_${chaveAcesso}.pdf`;
