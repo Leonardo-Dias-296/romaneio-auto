@@ -49,14 +49,7 @@ async function ensureLibs() {
 async function elementToOutput(element, opts = {}) {
   await ensureLibs();
   const { scale = 2, pageSize } = opts;
-  const canvas = await window.html2canvas(element, {
-    scale,
-    useCORS: true,
-    backgroundColor: "#ffffff",
-    logging: false,
-  });
 
-  const dataUrl = canvas.toDataURL("image/png");
   const { jsPDF } = window.jspdf;
   const pdf = pageSize && pageSize.widthMm && pageSize.heightMm
     ? new jsPDF({ orientation: "portrait", unit: "mm", format: [Number(pageSize.widthMm), Number(pageSize.heightMm)] })
@@ -68,21 +61,43 @@ async function elementToOutput(element, opts = {}) {
   const contentW = pageW - margin * 2;
   const x = (pageW - contentW) / 2;
 
-  const A4_PX = Math.round(1123 * scale);
-  const totalPx = canvas.height;
-  const totalPages = Math.max(1, Math.ceil(totalPx / A4_PX));
+  const pageElements = element.querySelectorAll("[data-romaneio-page]");
 
-  for (let p = 0; p < totalPages; p++) {
-    if (p > 0) pdf.addPage([pageW, pageH], "portrait");
-    const srcY = p * A4_PX;
-    const srcH = Math.min(A4_PX, totalPx - srcY);
-    const pageContentHmm = (srcH / (A4_PX)) * (pageH - margin * 2);
-    const pageCanvas = document.createElement("canvas");
-    pageCanvas.width = canvas.width;
-    pageCanvas.height = srcH;
-    const ctx = pageCanvas.getContext("2d");
-    ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
-    pdf.addImage(pageCanvas.toDataURL("image/png"), "PNG", x, margin, contentW, pageContentHmm, "", "FAST");
+  if (pageElements.length > 1) {
+    let firstDataUrl = "";
+    for (let i = 0; i < pageElements.length; i++) {
+      if (i > 0) pdf.addPage([pageW, pageH], "portrait");
+      const pageEl = pageElements[i];
+      const canvas = await window.html2canvas(pageEl, { scale, useCORS: true, backgroundColor: "#ffffff", logging: false });
+      if (i === 0) firstDataUrl = canvas.toDataURL("image/png");
+      const pageContentH = (canvas.height / canvas.width) * contentW;
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", x, margin, contentW, pageContentH, "", "FAST");
+    }
+    return { blob: pdf.output("blob"), dataUrl: firstDataUrl };
+  }
+
+  const canvas = await window.html2canvas(element, { scale, useCORS: true, backgroundColor: "#ffffff", logging: false });
+  const dataUrl = canvas.toDataURL("image/png");
+  const totalContentH = (canvas.height / canvas.width) * contentW;
+  const maxPageContentH = pageH - margin * 2;
+
+  if (totalContentH <= maxPageContentH) {
+    pdf.addImage(dataUrl, "PNG", x, margin, contentW, totalContentH, "", "FAST");
+  } else {
+    const A4_PX = Math.round((maxPageContentH / totalContentH) * canvas.height);
+    const totalPages = Math.ceil(canvas.height / A4_PX);
+    for (let p = 0; p < totalPages; p++) {
+      if (p > 0) pdf.addPage([pageW, pageH], "portrait");
+      const srcY = p * A4_PX;
+      const srcH = Math.min(A4_PX, canvas.height - srcY);
+      const pageContentHmm = (srcH / canvas.height) * totalContentH;
+      const pageCanvas = document.createElement("canvas");
+      pageCanvas.width = canvas.width;
+      pageCanvas.height = srcH;
+      const ctx = pageCanvas.getContext("2d");
+      ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+      pdf.addImage(pageCanvas.toDataURL("image/png"), "PNG", x, margin, contentW, pageContentHmm, "", "FAST");
+    }
   }
 
   return { blob: pdf.output("blob"), dataUrl };
@@ -386,7 +401,7 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
     }
     return (
       <div ref={wrapRef} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box" }}>
-        <div style={{ width: 794, height: PAGE_H, overflow: "hidden" }}>
+        <div data-romaneio-page={0} style={{ width: 794, background: "#fff" }}>
           <div style={{ padding: "16px 20px" }}>{singlePage}</div>
         </div>
       </div>
@@ -424,7 +439,7 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
     const chunk = notas.slice(start, start + ROWS_PER_PAGE);
     const isLast = p === totalPages - 1;
     return (
-      <div key={p} style={{ width: 794, height: PAGE_H, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box", overflow: "hidden", position: "relative" }}>
+      <div key={p} data-romaneio-page={p} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box", marginBottom: p < totalPages - 1 ? 12 : 0 }}>
         <div style={{ padding: "16px 20px" }}>
           {p === 0 && <HeaderBlock />}
           <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
@@ -441,7 +456,7 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
   });
 
   return (
-    <div ref={wrapRef} style={{ width: 794, height: PAGE_H * totalPages, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box", overflow: "hidden" }}>
+    <div ref={wrapRef} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box" }}>
       {pages}
     </div>
   );
