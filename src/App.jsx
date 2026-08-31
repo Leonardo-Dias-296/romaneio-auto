@@ -49,14 +49,6 @@ async function ensureLibs() {
 async function elementToOutput(element, opts = {}) {
   await ensureLibs();
   const { scale = 2, pageSize } = opts;
-  const canvas = await window.html2canvas(element, {
-    scale,
-    useCORS: true,
-    backgroundColor: "#ffffff",
-    logging: false,
-  });
-
-  const dataUrl = canvas.toDataURL("image/png");
   const { jsPDF } = window.jspdf;
   const pdf = pageSize && pageSize.widthMm && pageSize.heightMm
     ? new jsPDF({ orientation: "portrait", unit: "mm", format: [Number(pageSize.widthMm), Number(pageSize.heightMm)] })
@@ -67,8 +59,41 @@ async function elementToOutput(element, opts = {}) {
   const margin = 5;
   const contentW = pageW - margin * 2;
   const x = (pageW - contentW) / 2;
-
   const A4_PX = Math.round(1123 * scale);
+
+  // Check for data-page markers (multi-page romaneio)
+  const pageEls = element.querySelectorAll("[data-page]");
+
+  if (pageEls.length > 1) {
+    for (let i = 0; i < pageEls.length; i++) {
+      if (i > 0) pdf.addPage([pageW, pageH], "portrait");
+      const el = pageEls[i];
+      let canvas = await window.html2canvas(el, { scale, useCORS: true, backgroundColor: "#ffffff", logging: false });
+      // If a single page is taller than A4, split it
+      if (canvas.height > A4_PX) {
+        const subPages = Math.ceil(canvas.height / A4_PX);
+        for (let sp = 0; sp < subPages; sp++) {
+          if (sp > 0) pdf.addPage([pageW, pageH], "portrait");
+          const srcY = sp * A4_PX;
+          const srcH = Math.min(A4_PX, canvas.height - srcY);
+          const pageContentHmm = (srcH / A4_PX) * (pageH - margin * 2);
+          const pageCanvas = document.createElement("canvas");
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = srcH;
+          pageCanvas.getContext("2d").drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+          pdf.addImage(pageCanvas.toDataURL("image/png"), "PNG", x, margin, contentW, pageContentHmm, "", "FAST");
+        }
+      } else {
+        const pageContentH = (canvas.height / canvas.width) * contentW;
+        pdf.addImage(canvas.toDataURL("image/png"), "PNG", x, margin, contentW, pageContentH, "", "FAST");
+      }
+    }
+    return { blob: pdf.output("blob"), dataUrl: "" };
+  }
+
+  // Single element fallback: capture whole thing and split at A4 boundaries
+  const canvas = await window.html2canvas(element, { scale, useCORS: true, backgroundColor: "#ffffff", logging: false });
+  const dataUrl = canvas.toDataURL("image/png");
   const totalPx = canvas.height;
   const totalPages = Math.max(1, Math.ceil(totalPx / A4_PX));
 
@@ -252,12 +277,12 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
   const totalVolumes = notas.reduce((s, n) => s + (parseInt(n.quantidade_volumes) || 1), 0);
   const nfHeader = isMulti ? `${notas.length} Notas Fiscais` : (notas[0]?.numero_nf ? `NF-e ${notas[0].numero_nf}` : "Romaneio de Carga");
   const wrapRef = useRef(null);
-  const ROWS_PER_PAGE = 20;
+  const ROWS_PER_PAGE = 10;
   const PAGE_H = 1123;
 
   const thStyle = { background: "#0F172A", color: "#fff", fontWeight: 700, fontSize: 11, padding: "6px 10px", textTransform: "uppercase", letterSpacing: "1.5px", textAlign: "left" };
   const labelStyle = { width: "34%", padding: "6px 10px", fontWeight: 800, fontSize: 12, color: "#000", background: "#F1F5F9", borderRight: "1px solid #CBD5E1", borderBottom: "1px solid #CBD5E1", whiteSpace: "nowrap" };
-  const valueStyle = { padding: "6px 10px", fontSize: 12, color: "#000", borderBottom: "1px solid #CBD5E1", fontWeight: 700, wordBreak: "break-word" };
+  const valueStyle = { padding: "6px 10px", fontSize: 12, color: "#000", borderBottom: "1px solid #CBD5E1", fontWeight: 700, wordBreak: "break-word", overflowWrap: "anywhere", whiteSpace: "normal" };
 
   const Section = ({ title }) => <tr><td colSpan={2} style={thStyle}>{title}</td></tr>;
   const Row = ({ label, value }) => <tr><td style={labelStyle}>{label}</td><td style={valueStyle}>{value || "\u00A0"}</td></tr>;
@@ -354,7 +379,7 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
       <tbody>
         <Section title={`Notas Fiscais (${notas.length}) — Total de Volumes: ${totalVolumes}${startIdx > 0 ? " (continuação)" : ""}`} />
         <tr><td colSpan={2} style={{ padding: 0 }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
             <NotasTableHead />
             <tbody>{chunkNotas.map((n, i) => <NotasRow key={i} n={n} idx={startIdx + i + 1} />)}</tbody>
           </table>
@@ -422,7 +447,7 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
     const chunk = notas.slice(start, start + ROWS_PER_PAGE);
     const isLast = p === totalPages - 1;
     return (
-      <div key={p} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: "16px 20px", boxSizing: "border-box", marginBottom: p < totalPages - 1 ? 12 : 0 }}>
+      <div key={p} data-page={p} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: "16px 20px", boxSizing: "border-box" }}>
         {p === 0 && <HeaderBlock />}
         <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
           <tbody>
