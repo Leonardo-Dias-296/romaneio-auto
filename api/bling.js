@@ -364,17 +364,56 @@ export default async function handler(req, res) {
             const ct = r.headers.get("content-type") || "";
             const buf = Buffer.from(await r.arrayBuffer());
             debug.push(`${label}: status=${r.status} ct=${ct} size=${buf.length} firstHex=${buf.slice(0, 4).toString("hex")}`);
+
+            // 1. Check for raw PDF
             if (r.ok && buf.length > 100 && buf[0] === 0x25) {
               pdfBuffer = buf;
               return true;
             }
-            // If JSON, log its shape
-            if (ct.includes("json") || buf[0] === 0x7b) {
+
+            // 2. Check for JSON with base64-encoded PDF (Bling v3 format: {"data": "<base64>"})
+            if (r.ok && (ct.includes("json") || buf[0] === 0x7b)) {
               try {
                 const j = JSON.parse(buf.toString("utf8"));
-                debug.push(`${label} JSON keys: ${Object.keys(j).join(",")} data_keys: ${Object.keys(j.data || {}).join(",")}`);
+                debug.push(`${label} JSON keys: ${Object.keys(j).join(",")}`);
+
+                // Try various paths to find base64 PDF string
+                const candidates = [
+                  typeof j.data === "string" ? j.data : null,
+                  j.data?.documento,
+                  j.data?.danfe,
+                  j.data?.pdf,
+                  j.documento,
+                  j.danfe,
+                  j.pdf,
+                ];
+                for (const c of candidates) {
+                  if (c && typeof c === "string" && c.length > 100) {
+                    const decoded = Buffer.from(c, "base64");
+                    if (decoded.length > 100 && decoded[0] === 0x25) {
+                      pdfBuffer = decoded;
+                      debug.push(`${label} decoded base64 PDF: size=${decoded.length}`);
+                      return true;
+                    }
+                  }
+                }
+                debug.push(`${label} JSON found but no valid PDF in candidates`);
               } catch {}
             }
+
+            // 3. Check for raw base64 text
+            if (r.ok && buf.length > 200) {
+              const text = buf.toString("ascii").trim();
+              if (/^[A-Za-z0-9+/=\s]{200,}$/.test(text)) {
+                const decoded = Buffer.from(text.replace(/\s/g, ""), "base64");
+                if (decoded.length > 100 && decoded[0] === 0x25) {
+                  pdfBuffer = decoded;
+                  debug.push(`${label} decoded raw base64: size=${decoded.length}`);
+                  return true;
+                }
+              }
+            }
+
             return false;
           } catch (e) {
             debug.push(`${label}: error=${e.message}`);
