@@ -304,11 +304,11 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
   const NotasTableHead = () => (
     <thead>
       <tr>
-        <th style={{ ...thStyle, width: "5%", whiteSpace: "nowrap" }}>#</th>
-        <th style={{ ...thStyle, width: "15%", whiteSpace: "nowrap" }}>NF-e</th>
-        <th style={{ ...thStyle, width: "42%", whiteSpace: "nowrap" }}>Produto(s)</th>
-        <th style={{ ...thStyle, width: "10%", whiteSpace: "nowrap" }}>Volumes</th>
-        <th style={{ ...thStyle, width: "28%", whiteSpace: "nowrap" }}>Pedido</th>
+        <th style={{ ...thStyle, width: "6%" }}>#</th>
+        <th style={{ ...thStyle, width: "20%" }}>NF-e</th>
+        <th style={{ ...thStyle, width: "40%" }}>Produto(s)</th>
+        <th style={{ ...thStyle, width: "14%" }}>Volumes</th>
+        <th style={{ ...thStyle, width: "20%" }}>Pedido</th>
       </tr>
     </thead>
   );
