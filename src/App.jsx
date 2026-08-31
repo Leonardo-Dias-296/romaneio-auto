@@ -385,8 +385,8 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
       return <div style={{ background: "#fff", border: "1px solid #CBD5E1", borderRadius: 10, overflow: "hidden" }}>{singlePage}</div>;
     }
     return (
-      <div ref={wrapRef} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: "16px 20px", boxSizing: "border-box" }}>
-        {singlePage}
+      <div ref={wrapRef} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box" }}>
+        <div style={{ padding: "16px 20px" }}>{singlePage}</div>
       </div>
     );
   }
@@ -422,16 +422,18 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
     const chunk = notas.slice(start, start + ROWS_PER_PAGE);
     const isLast = p === totalPages - 1;
     return (
-      <div key={p} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: "16px 20px", boxSizing: "border-box", marginBottom: p < totalPages - 1 ? 12 : 0 }}>
-        {p === 0 && <HeaderBlock />}
-        <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
-          <tbody>
-            {p === 0 && <InfoBlock />}
-            {buildTableForChunk(chunk, start)}
-            {isLast && <SignaturesBlock />}
-          </tbody>
-        </table>
-        <FooterLine />
+      <div key={p} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box", marginBottom: p < totalPages - 1 ? 12 : 0 }}>
+        <div style={{ padding: "16px 20px" }}>
+          {p === 0 && <HeaderBlock />}
+          <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
+            <tbody>
+              {p === 0 && <InfoBlock />}
+              {buildTableForChunk(chunk, start)}
+              {isLast && <SignaturesBlock />}
+            </tbody>
+          </table>
+          <FooterLine />
+        </div>
       </div>
     );
   });
