@@ -372,19 +372,31 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
     </div>
   );
 
-  const buildTableForChunk = (chunkNotas, startIdx) => (
-    <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
-      <tbody>
-        <Section title={`Notas Fiscais (${notas.length}) — Total de Volumes: ${totalVolumes}`} />
-        <tr><td colSpan={2} style={{ padding: 0 }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
-            <NotasTableHead />
-            <tbody>{chunkNotas.map((n, i) => <NotasRow key={i} n={n} idx={startIdx + i + 1} />)}</tbody>
-          </table>
-        </td></tr>
-      </tbody>
-    </table>
-  );
+  const buildTableForChunk = (chunkNotas, startIdx) => {
+    const colWidths = ["6%", "20%", "40%", "14%", "20%"];
+    return (
+      <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1", tableLayout: "fixed" }}>
+        <thead>
+          <tr>
+            {["#", "NF-e", "Produto(s)", "Volumes", "Pedido"].map((h, i) => (
+              <th key={i} style={{ ...thStyle, width: colWidths[i] }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {chunkNotas.map((n, i) => (
+            <tr key={i}>
+              <td style={{ ...valueStyle, textAlign: "center", fontWeight: 900, width: colWidths[0] }}>{startIdx + i + 1}</td>
+              <td style={{ ...valueStyle, fontWeight: 900, width: colWidths[1] }}>{n.numero_nf || "—"}</td>
+              <td style={{ ...valueStyle, lineHeight: 1.3, width: colWidths[2] }}>{n.produtos || "—"}</td>
+              <td style={{ ...valueStyle, textAlign: "center", width: colWidths[3] }}>{n.quantidade_volumes || "1"}</td>
+              <td style={{ ...valueStyle, width: colWidths[4] }}>{n.numero_pedido || "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  };
 
   if (!isMulti) {
     const singlePage = (
@@ -419,11 +431,14 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
       <>
         <HeaderBlock />
         <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
-          <tbody>
-            <InfoBlock />
-            {buildTableForChunk(notas, 0)}
-            <SignaturesBlock />
-          </tbody>
+          <tbody><InfoBlock /></tbody>
+        </table>
+        <div style={{ marginTop: 6 }}>
+          <div style={thStyle}>Notas Fiscais ({notas.length}) — Total de Volumes: {totalVolumes}</div>
+          {buildTableForChunk(notas, 0)}
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1", marginTop: 6 }}>
+          <tbody><SignaturesBlock /></tbody>
         </table>
         <FooterLine />
       </>
@@ -439,11 +454,14 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
     <>
       <HeaderBlock />
       <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
-        <tbody>
-          <InfoBlock />
-          {buildTableForChunk(notas, 0)}
-          <SignaturesBlock />
-        </tbody>
+        <tbody><InfoBlock /></tbody>
+      </table>
+      <div style={{ marginTop: 6 }}>
+        <div style={thStyle}>Notas Fiscais ({notas.length}) — Total de Volumes: {totalVolumes}</div>
+        {buildTableForChunk(notas, 0)}
+      </div>
+      <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1", marginTop: 6 }}>
+        <tbody><SignaturesBlock /></tbody>
       </table>
       <FooterLine />
     </>
