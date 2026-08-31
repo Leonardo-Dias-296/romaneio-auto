@@ -171,7 +171,7 @@ async function generateEtiquetasPdf(labels, dados) {
           <div><div style="font-size:6px;font-weight:900;color:#000;">DESTINATÁRIO</div><div style="font-size:${nomeDestFs}px;font-weight:800;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(nomeDest) || "—"}</div>${endDest ? `<div style="font-size:6px;color:#000;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(endDest)}</div>` : ""}</div>
           <div><div style="font-size:6px;font-weight:900;color:#000;">TRANSPORTADORA</div><div style="font-size:${transpFs}px;font-weight:800;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(transp)}</div></div>
           <div style="display:flex;gap:6px;align-items:flex-end;min-height:0;">
-            <div style="flex:1;min-width:0;overflow:hidden;"><div style="font-size:6px;font-weight:900;color:#000;">PRODUTO(S)</div><div style="font-size:${prodFs}px;font-weight:700;color:#000;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${escapeHtml(produtos)}</div></div>
+            <div style="flex:1;min-width:0;overflow:hidden;"><div style="font-size:6px;font-weight:900;color:#000;">PRODUTO(S)</div><div style="font-size:${prodFs}px;font-weight:700;color:#000;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;white-space:pre-line;">${escapeHtml(produtos)}</div></div>
             <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;">${qrImgHtml}</div>
           </div>
         </div>
@@ -388,7 +388,7 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
             <tr key={i}>
               <td style={{ ...valueStyle, textAlign: "center", fontWeight: 900, width: colWidths[0] }}>{startIdx + i + 1}</td>
               <td style={{ ...valueStyle, fontWeight: 900, width: colWidths[1] }}>{n.numero_nf || "—"}</td>
-              <td style={{ ...valueStyle, lineHeight: 1.3, width: colWidths[2] }}>{n.produtos || "—"}</td>
+              <td style={{ ...valueStyle, lineHeight: 1.3, width: colWidths[2], whiteSpace: "pre-line" }}>{n.produtos || "—"}</td>
               <td style={{ ...valueStyle, textAlign: "center", width: colWidths[3] }}>{n.quantidade_volumes || "1"}</td>
               <td style={{ ...valueStyle, width: colWidths[4] }}>{n.numero_pedido || "—"}</td>
             </tr>
@@ -408,7 +408,7 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
             <Row label="N. da NF:" value={notas[0]?.numero_nf} />
             <Row label="Pedido:" value={notas[0]?.numero_pedido} />
             <Section title="Descrição da Mercadoria" />
-            <Row label="Produto(s):" value={notas[0]?.produtos} />
+            <tr><td style={labelStyle}>Produto(s):</td><td style={{ ...valueStyle, whiteSpace: "pre-line" }}>{notas[0]?.produtos || "\u00A0"}</td></tr>
             <Row label="Quantidade de Volumes:" value={notas[0]?.quantidade_volumes} />
             <SignaturesBlock />
           </tbody>
@@ -534,7 +534,7 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
         <div style={{ display: "flex", gap: 6, alignItems: "flex-end", minHeight: 0 }}>
           <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
             <div style={{ fontSize: 6, fontWeight: 900, color: "#000" }}>PRODUTO(S)</div>
-            <div style={{ fontSize: prodFs, fontWeight: 700, color: "#000", lineHeight: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{produtos}</div>
+            <div style={{ fontSize: prodFs, fontWeight: 700, color: "#000", lineHeight: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", whiteSpace: "pre-line" }}>{produtos}</div>
           </div>
           <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center" }}>
             <div style={{ fontSize: 5, fontWeight: 900, color: "#000", marginBottom: 2, letterSpacing: 0.5, lineHeight: 1 }}>Friclim.com</div>

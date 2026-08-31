@@ -123,7 +123,10 @@ async function buscarNF(numero, accessToken) {
     placa_veiculo: null,
     data_retirada: null,
     horario_retirada: null,
-    produtos: (nfData.itens || []).map(i => i.descricao).join(", ") || null,
+    produtos: (nfData.itens || []).map(i => {
+      const qtd = parseInt(i.quantidade) || 1;
+      return qtd > 1 ? `${qtd}x ${i.descricao}` : i.descricao;
+    }).join("\n") || null,
     quantidade_volumes: String(qtdVolumes),
     numero_pedido: numeroPedido,
     observacoes: nfData.obs_interna || nfData.obs || null,
