@@ -924,13 +924,15 @@ export default function App() {
           const r = await fetch(`/api/bling?${params}`, { credentials: "include" });
           if (!r.ok) {
             const errData = await r.json().catch(() => ({}));
-            erros.push(errData.erro || `HTTP ${r.status}`);
+            const debugStr = errData.debug ? "\n" + errData.debug.join("\n") : "";
+            erros.push((errData.erro || `HTTP ${r.status}`) + debugStr);
             continue;
           }
           const ct = r.headers.get("content-type") || "";
           if (ct.includes("json")) {
             const errData = await r.json().catch(() => ({}));
-            erros.push(errData.erro || "Resposta JSON inesperada");
+            const debugStr = errData.debug ? "\n" + errData.debug.join("\n") : "";
+            erros.push((errData.erro || "Resposta JSON inesperada") + debugStr);
             continue;
           }
           const blob = await r.blob();

@@ -345,7 +345,7 @@ export default async function handler(req, res) {
       const token = await getToken();
       if (!token) return res.status(400).json({ erro: "Bling não conectado." });
       const chaveAcesso = url.searchParams.get("chaveAcesso");
-      const linkDanfe = url.searchParams.get("linkDanfe");
+      const linkDanfeParam = url.searchParams.get("linkDanfe");
       if (!chaveAcesso || !/^\d{44}$/.test(chaveAcesso)) {
         return res.status(400).json({ erro: "chaveAcesso inválida (44 dígitos)." });
       }
@@ -355,89 +355,83 @@ export default async function handler(req, res) {
         const BLING_BASE_URL = process.env.BLING_BASE_URL || "https://api.bling.com.br/Api/v3";
 
         let pdfBuffer = null;
+        const debug = [];
 
-        // 1. Try linkDanfe URL first (direct link from NF data)
-        if (linkDanfe) {
+        // Helper to try fetching a URL and checking for PDF
+        async function tryFetchPdf(fetchUrl, label, headers = {}) {
           try {
-            const r = await fetch(linkDanfe, {
-              method: "GET",
-              headers: { Authorization: `Bearer ${accessToken}` },
-              signal: AbortSignal.timeout(30000),
-            });
-            if (r.ok) {
-              const buffer = Buffer.from(await r.arrayBuffer());
-              if (buffer.length > 100 && buffer[0] === 0x25) {
-                pdfBuffer = buffer;
-              }
+            const r = await fetch(fetchUrl, { method: "GET", headers, signal: AbortSignal.timeout(30000) });
+            const ct = r.headers.get("content-type") || "";
+            const buf = Buffer.from(await r.arrayBuffer());
+            debug.push(`${label}: status=${r.status} ct=${ct} size=${buf.length} firstHex=${buf.slice(0, 4).toString("hex")}`);
+            if (r.ok && buf.length > 100 && buf[0] === 0x25) {
+              pdfBuffer = buf;
+              return true;
             }
-          } catch {}
+            // If JSON, log its shape
+            if (ct.includes("json") || buf[0] === 0x7b) {
+              try {
+                const j = JSON.parse(buf.toString("utf8"));
+                debug.push(`${label} JSON keys: ${Object.keys(j).join(",")} data_keys: ${Object.keys(j.data || {}).join(",")}`);
+              } catch {}
+            }
+            return false;
+          } catch (e) {
+            debug.push(`${label}: error=${e.message}`);
+            return false;
+          }
         }
 
-        // 2. Fallback: try /nfe/{id} to get linkDanfe dynamically
+        // 1. Try linkDanfe URL from frontend
+        if (linkDanfeParam) {
+          if (await tryFetchPdf(linkDanfeParam, "linkDanfe_direct", { Authorization: `Bearer ${accessToken}` })) {
+            // success
+          }
+        }
+
+        // 2. Lookup NF from list to get linkDanfe
         if (!pdfBuffer) {
           try {
             const nfList = await blingGet(`/nfe?pagina=1&limite=100`, accessToken);
             const nf = (nfList.data || []).find(n => n.chaveAcesso === chaveAcesso);
+            debug.push(`nfList_lookup: found=${!!nf} linkDanfe=${nf?.linkDanfe || "null"} linkPDF=${nf?.linkPDF || "null"}`);
             if (nf && (nf.linkDanfe || nf.linkPDF)) {
-              const r = await fetch(nf.linkDanfe || nf.linkPDF, {
-                method: "GET",
-                headers: { Authorization: `Bearer ${accessToken}` },
-                signal: AbortSignal.timeout(30000),
-              });
-              if (r.ok) {
-                const buffer = Buffer.from(await r.arrayBuffer());
-                if (buffer.length > 100 && buffer[0] === 0x25) {
-                  pdfBuffer = buffer;
-                }
-              }
+              await tryFetchPdf(nf.linkDanfe || nf.linkPDF, "linkDanfe_fromList", { Authorization: `Bearer ${accessToken}` });
             }
-          } catch {}
+          } catch (e) {
+            debug.push(`nfList_lookup: error=${e.message}`);
+          }
         }
 
-        // 3. Last resort: try the old /nfe/documento endpoint
+        // 3. Try /nfe/{id} detail endpoint for linkDanfe
         if (!pdfBuffer) {
           try {
-            const r = await fetch(`${BLING_BASE_URL}/nfe/documento/${chaveAcesso}?formato=pdf`, {
-              method: "GET",
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                "enable-jwt": "1",
-                Accept: "1.0",
-              },
-              signal: AbortSignal.timeout(30000),
-            });
-            if (r.ok) {
-              const respBuffer = Buffer.from(await r.arrayBuffer());
-              if (respBuffer.length > 100 && respBuffer[0] === 0x25) {
-                pdfBuffer = respBuffer;
-              } else {
-                // Try parsing as JSON with base64 PDF
-                const respText = respBuffer.toString("utf8");
-                try {
-                  const jsonData = JSON.parse(respText);
-                  const candidates = [
-                    jsonData.data?.documento, jsonData.data?.danfe, jsonData.data?.pdf,
-                    jsonData.documento, jsonData.danfe, jsonData.pdf,
-                    typeof jsonData.data === "string" ? jsonData.data : null,
-                  ];
-                  for (const c of candidates) {
-                    if (c && typeof c === "string" && c.length > 100) {
-                      const decoded = Buffer.from(c, "base64");
-                      if (decoded[0] === 0x25) { pdfBuffer = decoded; break; }
-                    }
-                  }
-                } catch {}
-                if (!pdfBuffer) {
-                  const decoded = Buffer.from(respText, "base64");
-                  if (decoded[0] === 0x25 && decoded.length > 100) pdfBuffer = decoded;
-                }
+            const nfList = await blingGet(`/nfe?pagina=1&limite=100`, accessToken);
+            const nf = (nfList.data || []).find(n => n.chaveAcesso === chaveAcesso);
+            if (nf?.id) {
+              const detail = await blingGet(`/nfe/${nf.id}`, accessToken);
+              const nfData = detail.data || {};
+              debug.push(`nfDetail: linkDanfe=${nfData.linkDanfe || "null"} linkPDF=${nfData.linkPDF || "null"} keys=${Object.keys(nfData).join(",")}`);
+              if (nfData.linkDanfe || nfData.linkPDF) {
+                await tryFetchPdf(nfData.linkDanfe || nfData.linkPDF, "linkDanfe_fromDetail", { Authorization: `Bearer ${accessToken}` });
               }
             }
-          } catch {}
+          } catch (e) {
+            debug.push(`nfDetail: error=${e.message}`);
+          }
+        }
+
+        // 4. Last resort: /nfe/documento endpoint
+        if (!pdfBuffer) {
+          await tryFetchPdf(`${BLING_BASE_URL}/nfe/documento/${chaveAcesso}?formato=pdf`, "nfe_documento", {
+            Authorization: `Bearer ${accessToken}`,
+            "enable-jwt": "1",
+            Accept: "1.0",
+          });
         }
 
         if (!pdfBuffer || pdfBuffer.length < 100 || pdfBuffer[0] !== 0x25) {
-          return res.status(400).json({ erro: "Não foi possível obter o PDF da DANFE." });
+          return res.status(400).json({ erro: "Não foi possível obter o PDF da DANFE.", debug });
         }
 
         const filename = `DANFE_${chaveAcesso}.pdf`;
