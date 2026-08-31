@@ -1243,7 +1243,7 @@ export default function App() {
       {/* Header */}
       {authUser && (
       <div style={{ background: "#0F172A", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 28px", position: "relative", zIndex: 1, minHeight: 56 }}>
-        <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>Grupo Sollar - Friclim</div>
+        <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>RomaneioAuto</div>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           {isAdm(authUser) && <button onClick={() => { if (tab === "admin") { setTab("romaneio"); } else { setTab("admin"); adminLoadUsers(); } }} style={{ background: tab === "admin" ? "#F59E0B" : "rgba(255,255,255,.1)", color: tab === "admin" ? "#000" : "#fff", border: "none", padding: "6px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>{tab === "admin" ? "Voltar" : "Admin"}</button>}
           <span style={{ color: "rgba(255,255,255,.7)", fontSize: 12, fontWeight: 500 }}>{authUser.user_metadata?.nome || authUser.email}</span>
