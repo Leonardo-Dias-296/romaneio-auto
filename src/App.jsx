@@ -277,8 +277,6 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
   const totalVolumes = notas.reduce((s, n) => s + (parseInt(n.quantidade_volumes) || 1), 0);
   const nfHeader = isMulti ? `${notas.length} Notas Fiscais` : (notas[0]?.numero_nf ? `NF-e ${notas[0].numero_nf}` : "Romaneio de Carga");
   const wrapRef = useRef(null);
-  const ROWS_PER_PAGE = 10;
-  const PAGE_H = 1123;
 
   const thStyle = { background: "#0F172A", color: "#fff", fontWeight: 700, fontSize: 11, padding: "6px 10px", textTransform: "uppercase", letterSpacing: "1.5px", textAlign: "left" };
   const labelStyle = { width: "34%", padding: "6px 10px", fontWeight: 800, fontSize: 12, color: "#000", background: "#F1F5F9", borderRight: "1px solid #CBD5E1", borderBottom: "1px solid #CBD5E1", whiteSpace: "nowrap" };
@@ -377,7 +375,7 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
   const buildTableForChunk = (chunkNotas, startIdx) => (
     <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
       <tbody>
-        <Section title={`Notas Fiscais (${notas.length}) — Total de Volumes: ${totalVolumes}${startIdx > 0 ? " (continuação)" : ""}`} />
+        <Section title={`Notas Fiscais (${notas.length}) — Total de Volumes: ${totalVolumes}`} />
         <tr><td colSpan={2} style={{ padding: 0 }}>
           <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
             <NotasTableHead />
@@ -416,54 +414,44 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
     );
   }
 
-  const totalPages = Math.ceil(notas.length / ROWS_PER_PAGE);
-
   if (!forCapture) {
-    const pageBlocks = Array.from({ length: totalPages }, (_, p) => {
-      const start = p * ROWS_PER_PAGE;
-      const chunk = notas.slice(start, start + ROWS_PER_PAGE);
-      const isLast = p === totalPages - 1;
-      return (
-        <div key={p} style={{ background: "#fff", border: "1px solid #CBD5E1", borderRadius: 10, overflow: "hidden", marginBottom: p < totalPages - 1 ? 16 : 0 }}>
-          <div style={{ padding: "16px 20px" }}>
-            {p === 0 && <HeaderBlock />}
-            <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
-              <tbody>
-                {p === 0 && <InfoBlock />}
-                {buildTableForChunk(chunk, start)}
-                {isLast && <SignaturesBlock />}
-              </tbody>
-            </table>
-            <FooterLine />
-          </div>
-        </div>
-      );
-    });
-    return <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>{pageBlocks}</div>;
-  }
-
-  const pages = Array.from({ length: totalPages }, (_, p) => {
-    const start = p * ROWS_PER_PAGE;
-    const chunk = notas.slice(start, start + ROWS_PER_PAGE);
-    const isLast = p === totalPages - 1;
-    return (
-      <div key={p} data-page={p} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: "16px 20px", boxSizing: "border-box" }}>
-        {p === 0 && <HeaderBlock />}
+    const content = (
+      <>
+        <HeaderBlock />
         <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
           <tbody>
-            {p === 0 && <InfoBlock />}
-            {buildTableForChunk(chunk, start)}
-            {isLast && <SignaturesBlock />}
+            <InfoBlock />
+            {buildTableForChunk(notas, 0)}
+            <SignaturesBlock />
           </tbody>
         </table>
         <FooterLine />
+      </>
+    );
+    return (
+      <div style={{ background: "#fff", border: "1px solid #CBD5E1", borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ padding: "16px 20px" }}>{content}</div>
       </div>
     );
-  });
+  }
+
+  const content = (
+    <>
+      <HeaderBlock />
+      <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
+        <tbody>
+          <InfoBlock />
+          {buildTableForChunk(notas, 0)}
+          <SignaturesBlock />
+        </tbody>
+      </table>
+      <FooterLine />
+    </>
+  );
 
   return (
-    <div ref={wrapRef} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box" }}>
-      {pages}
+    <div ref={wrapRef} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: "16px 20px", boxSizing: "border-box" }}>
+      {content}
     </div>
   );
 }
