@@ -633,7 +633,7 @@ export default function App() {
       const pageSize = currentPageSize();
       const scale = 3;
       const { blob, dataUrl } = await elementToOutput(ref.current, { scale, pageSize });
-      setModal({ imgDataUrl: dataUrl, pdfBlob: blob, filename });
+      setModal({ imgDataUrl: null, pdfBlob: blob, filename });
     } catch (err) { alert("Erro: " + err.message); }
     finally { setBusy(false); }
   }
