@@ -61,29 +61,6 @@ async function elementToOutput(element, opts = {}) {
   const contentW = pageW - margin * 2;
   const x = (pageW - contentW) / 2;
 
-  const pageElements = element.querySelectorAll("[data-romaneio-page]");
-
-  if (pageElements.length > 1) {
-    let firstDataUrl = "";
-    const A4_PX = Math.round((pageH - margin * 2) / contentW * 794 * scale);
-    for (let i = 0; i < pageElements.length; i++) {
-      if (i > 0) pdf.addPage([pageW, pageH], "portrait");
-      const pageEl = pageElements[i];
-      let canvas = await window.html2canvas(pageEl, { scale, useCORS: true, backgroundColor: "#ffffff", logging: false });
-      if (canvas.height > A4_PX) {
-        const cropped = document.createElement("canvas");
-        cropped.width = canvas.width;
-        cropped.height = A4_PX;
-        cropped.getContext("2d").drawImage(canvas, 0, 0, canvas.width, A4_PX, 0, 0, canvas.width, A4_PX);
-        canvas = cropped;
-      }
-      if (i === 0) firstDataUrl = canvas.toDataURL("image/png");
-      const pageContentH = (canvas.height / canvas.width) * contentW;
-      pdf.addImage(canvas.toDataURL("image/png"), "PNG", x, margin, contentW, pageContentH, "", "FAST");
-    }
-    return { blob: pdf.output("blob"), dataUrl: firstDataUrl };
-  }
-
   const canvas = await window.html2canvas(element, { scale, useCORS: true, backgroundColor: "#ffffff", logging: false });
   const dataUrl = canvas.toDataURL("image/png");
   const totalContentH = (canvas.height / canvas.width) * contentW;
@@ -408,10 +385,8 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
       return <div style={{ background: "#fff", border: "1px solid #CBD5E1", borderRadius: 10, overflow: "hidden" }}>{singlePage}</div>;
     }
     return (
-      <div ref={wrapRef} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box" }}>
-        <div data-romaneio-page={0} style={{ width: 794, height: PAGE_H, overflow: "hidden", background: "#fff" }}>
-          <div style={{ padding: "16px 20px" }}>{singlePage}</div>
-        </div>
+      <div ref={wrapRef} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: "16px 20px", boxSizing: "border-box" }}>
+        {singlePage}
       </div>
     );
   }
@@ -447,18 +422,16 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
     const chunk = notas.slice(start, start + ROWS_PER_PAGE);
     const isLast = p === totalPages - 1;
     return (
-      <div key={p} data-romaneio-page={p} style={{ width: 794, height: PAGE_H, background: "#fff", fontFamily: "Arial, sans-serif", padding: 0, boxSizing: "border-box", overflow: "hidden", marginBottom: p < totalPages - 1 ? 12 : 0 }}>
-        <div style={{ padding: "16px 20px" }}>
-          {p === 0 && <HeaderBlock />}
-          <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
-            <tbody>
-              {p === 0 && <InfoBlock />}
-              {buildTableForChunk(chunk, start)}
-              {isLast && <SignaturesBlock />}
-            </tbody>
-          </table>
-          <FooterLine />
-        </div>
+      <div key={p} style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: "16px 20px", boxSizing: "border-box", marginBottom: p < totalPages - 1 ? 12 : 0 }}>
+        {p === 0 && <HeaderBlock />}
+        <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #CBD5E1" }}>
+          <tbody>
+            {p === 0 && <InfoBlock />}
+            {buildTableForChunk(chunk, start)}
+            {isLast && <SignaturesBlock />}
+          </tbody>
+        </table>
+        <FooterLine />
       </div>
     );
   });
