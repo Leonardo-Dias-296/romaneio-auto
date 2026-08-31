@@ -911,26 +911,26 @@ export default function App() {
   async function baixarDanfes() {
     if (nfSelected.size === 0) { alert("Selecione pelo menos uma NF"); return; }
     const selected = nfList.filter(n => nfSelected.has(n.numero));
-    const chaves = selected.map(n => n.chaveAcesso).filter(Boolean);
-    if (chaves.length === 0) { alert("NFs selecionadas não possuem chave de acesso."); return; }
     setDanfeLoading(true);
     try {
       let baixados = 0;
       let erros = [];
-      for (const chave of chaves) {
+      for (const nf of selected) {
+        const chave = nf.chaveAcesso;
+        if (!chave) { erros.push(`NF ${nf.numero}: sem chave de acesso`); continue; }
         try {
-          const r = await fetch(`/api/bling?action=downloadDanfe&chaveAcesso=${chave}`, { credentials: "include" });
+          const params = new URLSearchParams({ action: "downloadDanfe", chaveAcesso: chave });
+          if (nf.linkDanfe) params.set("linkDanfe", nf.linkDanfe);
+          const r = await fetch(`/api/bling?${params}`, { credentials: "include" });
           if (!r.ok) {
             const errData = await r.json().catch(() => ({}));
-            const debugInfo = errData.debug ? `\nDebug: status=${errData.debug.status} size=${errData.debug.size} firstHex=${errData.debug.firstHex} preview=${errData.debug.textPreview}` : "";
-            erros.push((errData.erro || `HTTP ${r.status}`) + debugInfo);
+            erros.push(errData.erro || `HTTP ${r.status}`);
             continue;
           }
           const ct = r.headers.get("content-type") || "";
           if (ct.includes("json")) {
             const errData = await r.json().catch(() => ({}));
-            const debugInfo = errData.debug ? `\nDebug: status=${errData.debug.status} size=${errData.debug.size} firstHex=${errData.debug.firstHex} preview=${errData.debug.textPreview}` : "";
-            erros.push((errData.erro || "Resposta JSON inesperada") + debugInfo);
+            erros.push(errData.erro || "Resposta JSON inesperada");
             continue;
           }
           const blob = await r.blob();
