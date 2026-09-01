@@ -25,6 +25,7 @@ const PROMPT = `Você é um extrator de dados de notas fiscais brasileiras. Anal
   "numero_nf": "número da nota fiscal (apenas números)",
   "numero_pedido": "número do pedido",
   "produtos": "lista dos produtos com quantidade, um por linha, no formato QUANTIDADEx DESCRIÇÃO (ex: 2x Ar Cond Frio Inverter 9000BTU). Se houver apenas 1 unidade, escreva apenas a descrição sem quantidade.",
+  "itens": "array de objetos com cada produto separado, no formato [{\"descricao\": \"nome do produto\", \"quantidade\": 2}]. Cada item distinto da NF deve ser um objeto no array.",
   "quantidade_volumes": "quantidade total de volumes (número)",
   "nome_destinatario": "nome ou razão social do destinatário/cliente (para quem é a mercadoria)",
   "endereco_destinatario": "endereço completo do destinatário (rua, número, bairro, cidade/UF)",

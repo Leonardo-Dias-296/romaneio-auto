@@ -140,7 +140,7 @@ async function generateEtiquetasPdf(labels, dados) {
     const nf = l.nota.numero_nf || "—";
     const data = dados.data_retirada || "—";
     const transp = l.nota.transportadora || dados.transportadora || "—";
-    const produtos = l.nota.produtos || dados.produtos || "Carga geral";
+    const produtos = l.produto || l.nota.produtos || dados.produtos || "Carga geral";
     const nomeDest = l.nota.nome_destinatario || dados.nome_destinatario || "";
     const endDest = l.nota.endereco_destinatario || dados.endereco_destinatario || "";
     const transpFs = transp.length > 40 ? 8 : transp.length > 28 ? 9 : 10;
@@ -275,7 +275,7 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
   const notas = dados.notas || [];
   const isMulti = notas.length > 1;
   const totalVolumes = notas.reduce((s, n) => s + (parseInt(n.quantidade_volumes) || 1), 0);
-  const nfHeader = isMulti ? `${notas.length} Notas Fiscais` : (notas[0]?.numero_nf ? `NF-e ${notas[0].numero_nf}` : "Romaneio de Carga");
+  const nfHeader = isMulti ? `${notas.length} Notas Fiscais` : (notas[0]?.numero_nf ? `NF-e ${notas[0].numero_nf}` : "Romaneio de Coleta");
   const wrapRef = useRef(null);
 
   const thStyle = { background: "#0F172A", color: "#fff", fontWeight: 700, fontSize: 11, padding: "6px 10px", textTransform: "uppercase", letterSpacing: "1.5px", textAlign: "left" };
@@ -297,7 +297,7 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
         </div>
       </div>
       <div style={{ textAlign: "right", flexShrink: 0 }}>
-        <div style={{ fontSize: forCapture ? 15 : 14, fontWeight: 900, color: "#000", textTransform: "uppercase" }}>Romaneio de Carga</div>
+        <div style={{ fontSize: forCapture ? 15 : 14, fontWeight: 900, color: "#000", textTransform: "uppercase" }}>Romaneio de Coleta</div>
         <div style={{ fontSize: forCapture ? 11 : 12, color: "#1E293B", fontWeight: 700, marginTop: 2 }}>Comprovante de Retirada</div>
         <div style={{ marginTop: 6, display: "inline-block", border: "2px solid #0F172A", borderRadius: 4, padding: "3px 10px" }}>
           <span style={{ fontSize: 13, fontWeight: 900, color: "#000" }}>{nfHeader}</span>
@@ -476,12 +476,12 @@ function RomaneioDoc({ dados, forCapture, userEmail }) {
 
 // ── Etiqueta ───────────────────────────────────────────────────
 // Dimensão real: 100mm x 50mm (proporção 2:1)
-function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
+function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture, produto }) {
   const W = 378, H = 189;
   const nomeDest = nota.nome_destinatario || dados.nome_destinatario || "";
   const endDest = nota.endereco_destinatario || dados.endereco_destinatario || "";
   const transp = nota.transportadora || dados.transportadora || "";
-  const produtos = (nota.produtos || "Carga geral");
+  const produtos = produto || (nota.produtos || "Carga geral");
 
   const transpFs = transp.length > 40 ? 8 : transp.length > 28 ? 9 : 10;
   const nomeDestFs = nomeDest.length > 35 ? 9 : nomeDest.length > 25 ? 10 : 11;
@@ -559,13 +559,35 @@ function Etiqueta({ nota, dados, volumeInNota, totalVolumesNota, forCapture }) {
   );
 }
 
+function distributeVolumes(nota) {
+  const totalVols = parseInt(nota.quantidade_volumes) || 1;
+  const itens = nota.itens || [];
+  if (itens.length === 0) {
+    return Array.from({ length: totalVols }, (_, v) => ({ volumeInNota: v, totalVolumesNota: totalVols, produto: nota.produtos || "Carga geral" }));
+  }
+  const totalQty = itens.reduce((s, i) => s + (i.quantidade || 1), 0);
+  const labels = [];
+  let volIdx = 0;
+  for (const item of itens) {
+    const itemQty = item.quantidade || 1;
+    const itemVols = Math.round((itemQty / totalQty) * totalVols);
+    for (let v = 0; v < itemVols && volIdx < totalVols; v++, volIdx++) {
+      labels.push({ volumeInNota: volIdx, totalVolumesNota: totalVols, produto: item.descricao || "Carga geral" });
+    }
+  }
+  while (volIdx < totalVols) {
+    labels.push({ volumeInNota: volIdx, totalVolumesNota: totalVols, produto: itens[itens.length - 1]?.descricao || "Carga geral" });
+    volIdx++;
+  }
+  return labels;
+}
+
 function EtiquetasCapture({ dados }) {
   const notas = dados.notas || [];
   const labels = [];
   for (const nota of notas) {
-    const vols = parseInt(nota.quantidade_volumes) || 1;
-    for (let v = 0; v < vols; v++) {
-      labels.push({ nota, volumeInNota: v, totalVolumesNota: vols });
+    for (const l of distributeVolumes(nota)) {
+      labels.push({ nota, ...l });
     }
   }
 
@@ -573,7 +595,7 @@ function EtiquetasCapture({ dados }) {
     <div style={{ width: 794, background: "#fff", fontFamily: "Arial, sans-serif", padding: 20 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         {labels.map((l, i) => (
-          <Etiqueta key={i} nota={l.nota} dados={dados} volumeInNota={l.volumeInNota} totalVolumesNota={l.totalVolumesNota} forCapture />
+          <Etiqueta key={i} nota={l.nota} dados={dados} volumeInNota={l.volumeInNota} totalVolumesNota={l.totalVolumesNota} produto={l.produto} forCapture />
         ))}
       </div>
     </div>
@@ -846,6 +868,7 @@ export default function App() {
         allNotas.push({
           numero_nf: parsed.numero_nf,
           produtos: parsed.produtos,
+          itens: parsed.itens || [],
           quantidade_volumes: parsed.quantidade_volumes,
           numero_pedido: parsed.numero_pedido,
           observacoes: parsed.observacoes,
@@ -921,6 +944,7 @@ export default function App() {
         const nota = {
           numero_nf: nfData.numero_nf || "",
           produtos: nfData.produtos || "",
+          itens: nfData.itens || [],
           quantidade_volumes: nfData.quantidade_volumes || "",
           numero_pedido: nfData.numero_pedido || "",
           observacoes: nfData.observacoes || "",
@@ -972,7 +996,7 @@ export default function App() {
   function addNota() {
     setDados(prev => ({
       ...prev,
-      notas: [...(prev.notas || []), { numero_nf: "", produtos: "", quantidade_volumes: "", numero_pedido: "", observacoes: "" }],
+      notas: [...(prev.notas || []), { numero_nf: "", produtos: "", itens: [], quantidade_volumes: "", numero_pedido: "", observacoes: "" }],
     }));
   }
   function removeNota(idx) {
@@ -1363,9 +1387,8 @@ export default function App() {
                   {(() => {
                     const notas = dados.notas || [];
                     return notas.flatMap((nota, notaIdx) => {
-                      const vols = parseInt(nota.quantidade_volumes) || 1;
-                      return Array.from({ length: vols }, (_, v) => (
-                        <Etiqueta key={`${notaIdx}-${v}`} nota={nota} dados={dados} volumeInNota={v} totalVolumesNota={vols} />
+                      return distributeVolumes(nota).map((l, v) => (
+                        <Etiqueta key={`${notaIdx}-${v}`} nota={nota} dados={dados} volumeInNota={l.volumeInNota} totalVolumesNota={l.totalVolumesNota} produto={l.produto} />
                       ));
                     });
                   })()}
@@ -1380,8 +1403,7 @@ export default function App() {
                       const labels = [];
                       const notas = dados.notas || [];
                       for (const nota of notas) {
-                        const vols = parseInt(nota.quantidade_volumes) || 1;
-                        for (let v = 0; v < vols; v++) labels.push({ nota, volumeInNota: v, totalVolumesNota: vols });
+                        for (const l of distributeVolumes(nota)) labels.push({ nota, ...l });
                       }
                       const { blob } = await generateEtiquetasPdf(labels, dados);
                       const dataUrl = URL.createObjectURL(blob);
@@ -1395,8 +1417,7 @@ export default function App() {
                       const labels = [];
                       const notas = dados.notas || [];
                       for (const nota of notas) {
-                        const vols = parseInt(nota.quantidade_volumes) || 1;
-                        for (let v = 0; v < vols; v++) labels.push({ nota, volumeInNota: v, totalVolumesNota: vols });
+                        for (const l of distributeVolumes(nota)) labels.push({ nota, ...l });
                       }
                       const { blob } = await generateEtiquetasPdf(labels, dados);
                       downloadBlob(blob, `etiquetas-${nfSlug}.pdf`);

@@ -127,6 +127,10 @@ async function buscarNF(numero, accessToken) {
       const qtd = parseInt(i.quantidade) || 1;
       return qtd > 1 ? `${qtd}x ${i.descricao}` : i.descricao;
     }).join("\n") || null,
+    itens: (nfData.itens || []).map(i => ({
+      descricao: i.descricao || null,
+      quantidade: parseInt(i.quantidade) || 1,
+    })),
     quantidade_volumes: String(qtdVolumes),
     numero_pedido: numeroPedido,
     observacoes: nfData.obs_interna || nfData.obs || null,
